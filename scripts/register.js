@@ -9,25 +9,19 @@ $("#create-account-button").click(function() {
         alert("Passwords do not match.");
         return;
     }
-    const users = JSON.parse(localStorage.getItem('users')) || [];
+    const customers = JSON.parse(localStorage.getItem('customers')) || [];
     
-    const userExists = users.some(u => u.email === email);
+    const userExists = customers.some(u => u.email === email);
 
     if (userExists) {
         alert("User with this email already exists.");
         return;
     }
 
-    const newUser = {
-        firstname: firstname,
-        lastname: lastname,
-        email: email,
-        password: password,
-        role: 'customer'
-    };
+    const newCustomer = new Customer(email, password, firstname, lastname);
 
-    users.push(newUser);
-    localStorage.setItem('users', JSON.stringify(users));
+    customers.push(newCustomer);
+    localStorage.setItem('customers', JSON.stringify(customers));
     alert('Account created successfully!');
     window.location.href = 'login.html';
 });
