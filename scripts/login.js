@@ -1,17 +1,19 @@
-
 $("#sign-in-button").click(function() {
-    const username = $("#username").val();
+    const email = $("#email").val();
     const password = $("#password").val();
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    const user = users.find(u => u.username === username && u.password === password);
-    if (user) {
+    const customers = JSON.parse(localStorage.getItem('customers')) || [];
+    const customer = customers.find(u => u.email === email && u.password === password);
+    if (customer) {
         alert('Login successful!');
-        if(user.role === 'admin') {
-            window.location.href = 'admin.html';
-        } else {
-            window.location.href = 'customer.html';
-        }
-    } else {
-        alert('Invalid username or password.');
+        window.location.href = 'costumer.html';
+        return;
     }
+    const admins = JSON.parse(localStorage.getItem('admins')) || [];
+    const admin = admins.find(a => a.email === email && a.password === password);
+    if (admin) {
+        alert('Login successful!');
+        window.location.href = 'admin.html';
+        return;
+    }
+    alert('Invalid email or password.');
 });
