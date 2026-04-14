@@ -1,5 +1,5 @@
-class user{
-    constructor(email, password,name,surname, role) {
+class User {
+    constructor(email, password, name, surname, role) {
         this.email = email;
         this.password = password;
         this.name = name;
@@ -7,5 +7,4 @@ class user{
         this.role = role;
         console.log("User created: " + this.email);
     }
-
 }
