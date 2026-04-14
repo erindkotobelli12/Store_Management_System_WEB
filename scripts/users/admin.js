@@ -1,5 +1,5 @@
-class admin extends user {
-    constructor(username, password, name, surname) {
-        super(username, password, name, surname, 'admin');
+class Admin extends User {
+    constructor(email, password, name, surname) {
+        super(email, password, name, surname, 'admin');
     }
 }
