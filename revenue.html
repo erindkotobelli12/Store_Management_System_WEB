@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Revenue - Admin Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Admin Styles -->
+    <link rel="stylesheet" href="style/admin.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-brand">
+            <h5><i class="fas fa-store"></i> ShopPanel</h5>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="sidebar-section-title">MAIN</li>
+            <li><a href="admin.html"><i class="fas fa-chart-line"></i><span>Dashboard</span></a></li>
+            <li><a href="orders.html"><i class="fas fa-shopping-bag"></i><span>Orders</span></a></li>
+            <li><a href="products.html"><i class="fas fa-boxes"></i><span>Products</span></a></li>
+            <li><a href="customers.html"><i class="fas fa-users"></i><span>Customers</span></a></li>
+
+            <li class="sidebar-section-title">STORE</li>
+            <li><a href="revenue.html" class="active"><i class="fas fa-dollar-sign"></i><span>Revenue</span></a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Topbar -->
+        <div class="topbar">
+            <h3>Revenue Management</h3>
+            <div class="user-avatar">EK</div>
+        </div>
+
+        <!-- Revenue Stats -->
+        <div class="row">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-card-icon revenue">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <h6>Total Revenue</h6>
+                    <h3>$48,295</h3>
+                    <p class="stat-card-change"><i class="fas fa-arrow-up"></i> +12.5% from last month</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-card-icon">
+                        <i class="fas fa-coins" style="color: #20c997;"></i>
+                    </div>
+                    <h6>Gross Profit</h6>
+                    <h3>$18,524</h3>
+                    <p class="stat-card-change"><i class="fas fa-arrow-up"></i> +8.3% from last month</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-card-icon">
+                        <i class="fas fa-hand-holding-usd" style="color: #0d6efd;"></i>
+                    </div>
+                    <h6>Net Revenue</h6>
+                    <h3>$15,842</h3>
+                    <p class="stat-card-change"><i class="fas fa-arrow-up"></i> +5.2% from last month</p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-card-icon">
+                        <i class="fas fa-percent" style="color: #fd7e14;"></i>
+                    </div>
+                    <h6>Profit Margin</h6>
+                    <h3>32.8%</h3>
+                    <p class="stat-card-change"><i class="fas fa-arrow-up"></i> +1.2% from last month</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Chart -->
+        <div class="row mt-4">
+            <div class="col-lg-8">
+                <div class="stat-card">
+                    <div class="card-header-custom">
+                        <h5>Revenue Trend</h5>
+                    </div>
+                    <div style="padding: 20px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 12px;">
+                            <div style="text-align: center; padding: 12px; border-radius: 6px; background-color: #d4edda; border: 1px solid #c3e6cb;">
+                                <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Jan</p>
+                                <h6 style="margin: 0; color: #155724; font-weight: 600; font-size: 14px;">$12k</h6>
+                            </div>
+                            <div style="text-align: center; padding: 12px; border-radius: 6px; background-color: #d4edda; border: 1px solid #c3e6cb;">
+                                <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Feb</p>
+                                <h6 style="margin: 0; color: #155724; font-weight: 600; font-size: 14px;">$19k</h6>
+                            </div>
+                            <div style="text-align: center; padding: 12px; border-radius: 6px; background-color: #f8d7da; border: 1px solid #f5c6cb;">
+                                <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Mar</p>
+                                <h6 style="margin: 0; color: #721c24; font-weight: 600; font-size: 14px;">$5k</h6>
+                            </div>
+                            <div style="text-align: center; padding: 12px; border-radius: 6px; background-color: #d4edda; border: 1px solid #c3e6cb;">
+                                <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Apr</p>
+                                <h6 style="margin: 0; color: #155724; font-weight: 600; font-size: 14px;">$22k</h6>
+                            </div>
+                            <div style="text-align: center; padding: 12px; border-radius: 6px; background-color: #d4edda; border: 1px solid #c3e6cb;">
+                                <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">May</p>
+                                <h6 style="margin: 0; color: #155724; font-weight: 600; font-size: 14px;">$25k</h6>
+                            </div>
+                            <div style="text-align: center; padding: 12px; border-radius: 6px; background-color: #d4edda; border: 1px solid #c3e6cb;">
+                                <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Jun</p>
+                                <h6 style="margin: 0; color: #155724; font-weight: 600; font-size: 14px;">$28k</h6>
+                            </div>
+                            <div style="text-align: center; padding: 12px; border-radius: 6px; background-color: #d4edda; border: 1px solid #c3e6cb;">
+                                <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Jul</p>
+                                <h6 style="margin: 0; color: #155724; font-weight: 600; font-size: 14px;">$32k</h6>
+                            </div>
+                            <div style="text-align: center; padding: 12px; border-radius: 6px; background-color: #d4edda; border: 1px solid #c3e6cb;">
+                                <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Aug</p>
+                                <h6 style="margin: 0; color: #155724; font-weight: 600; font-size: 14px;">$35k</h6>
+                            </div>
+                            <div style="text-align: center; padding: 12px; border-radius: 6px; background-color: #f8d7da; border: 1px solid #f5c6cb;">
+                                <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Sep</p>
+                                <h6 style="margin: 0; color: #721c24; font-weight: 600; font-size: 14px;">$3k</h6>
+                            </div>
+                            <div style="text-align: center; padding: 12px; border-radius: 6px; background-color: #d4edda; border: 1px solid #c3e6cb;">
+                                <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Oct</p>
+                                <h6 style="margin: 0; color: #155724; font-weight: 600; font-size: 14px;">$28k</h6>
+                            </div>
+                            <div style="text-align: center; padding: 12px; border-radius: 6px; background-color: #d4edda; border: 1px solid #c3e6cb;">
+                                <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Nov</p>
+                                <h6 style="margin: 0; color: #155724; font-weight: 600; font-size: 14px;">$26k</h6>
+                            </div>
+                            <div style="text-align: center; padding: 12px; border-radius: 6px; background-color: #d4edda; border: 1px solid #c3e6cb;">
+                                <p style="font-size: 12px; color: #666; margin: 0 0 5px 0;">Dec</p>
+                                <h6 style="margin: 0; color: #155724; font-weight: 600; font-size: 14px;">$31k</h6>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenue by Category -->
+            <div class="col-lg-4">
+                <div class="stat-card">
+                    <div class="card-header-custom">
+                        <h5>Revenue by Category</h5>
+                    </div>
+                    <div style="padding: 20px;">
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span style="font-weight: 500; color: #333;">Footwear</span>
+                                <span style="color: #28a745; font-weight: bold;">$18,500</span>
+                            </div>
+                            <div style="background: #e9ecef; border-radius: 4px; height: 8px; overflow: hidden;">
+                                <div style="background: #28a745; height: 100%; width: 38%;"></div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span style="font-weight: 500; color: #333;">Accessories</span>
+                                <span style="color: #0d6efd; font-weight: bold;">$15,200</span>
+                            </div>
+                            <div style="background: #e9ecef; border-radius: 4px; height: 8px; overflow: hidden;">
+                                <div style="background: #0d6efd; height: 100%; width: 31%;"></div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span style="font-weight: 500; color: #333;">Clothing</span>
+                                <span style="color: #fd7e14; font-weight: bold;">$9,450</span>
+                            </div>
+                            <div style="background: #e9ecef; border-radius: 4px; height: 8px; overflow: hidden;">
+                                <div style="background: #fd7e14; height: 100%; width: 19%;"></div>
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span style="font-weight: 500; color: #333;">Electronics</span>
+                                <span style="color: #20c997; font-weight: bold;">$5,145</span>
+                            </div>
+                            <div style="background: #e9ecef; border-radius: 4px; height: 8px; overflow: hidden;">
+                                <div style="background: #20c997; height: 100%; width: 11%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Revenue Transactions -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="stat-card">
+                    <div class="card-header-custom">
+                        <h5>Revenue Transactions</h5>
+                    </div>
+                    <div style="padding: 0; overflow-x: auto;">
+                        <table class="table table-custom">
+                            <thead>
+                                <tr>
+                                    <th>TRANSACTION ID</th>
+                                    <th>DATE</th>
+                                    <th>CUSTOMER</th>
+                                    <th>AMOUNT</th>
+                                    <th>PAYMENT METHOD</th>
+                                    <th>STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="revenueTableBody">
+                                <tr>
+                                    <td>#TXN-0001</td>
+                                    <td>Apr 13, 2025</td>
+                                    <td>Ana Leka</td>
+                                    <td>$89.99</td>
+                                    <td><span class="badge bg-primary">Credit Card</span></td>
+                                    <td><span class="badge bg-success">Completed</span></td>
+                                </tr>
+                                <tr>
+                                    <td>#TXN-0002</td>
+                                    <td>Apr 12, 2025</td>
+                                    <td>James Brown</td>
+                                    <td>$259.98</td>
+                                    <td><span class="badge bg-primary">Credit Card</span></td>
+                                    <td><span class="badge bg-success">Completed</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="scripts/users/revenue.js"></script>
+</body>
+</html>
