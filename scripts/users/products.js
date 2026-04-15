@@ -12,6 +12,8 @@ class Products {
         this.loadProducts();
         this.attachEventListeners();
         this.populateCategoryDropdown();
+        this.updateStats();
+        this.displayProducts();
     }
 
     loadCategories() {
@@ -123,6 +125,36 @@ class Products {
         localStorage.setItem('products', JSON.stringify(this.products));
     }
 
+    updateStats() {
+        // Calculate stats
+        const totalProducts = this.products.length;
+        const inStockProducts = this.products.filter(p => p.stock > 0).length;
+        const lowStockProducts = this.products.filter(p => p.stock > 0 && p.stock < 50).length;
+        const outOfStockProducts = this.products.filter(p => p.stock === 0).length;
+
+        // Update DOM elements
+        const totalCount = document.getElementById('totalProductsCount');
+        const inStockCount = document.getElementById('inStockCount');
+        const lowStockCount = document.getElementById('lowStockCount');
+        const outOfStockCount = document.getElementById('outOfStockCount');
+
+        const totalChange = document.getElementById('totalProductsChange');
+        const inStockChange = document.getElementById('inStockChange');
+        const lowStockChange = document.getElementById('lowStockChange');
+        const outOfStockChange = document.getElementById('outOfStockChange');
+
+        if (totalCount) totalCount.textContent = totalProducts;
+        if (inStockCount) inStockCount.textContent = inStockProducts;
+        if (lowStockCount) lowStockCount.textContent = lowStockProducts;
+        if (outOfStockCount) outOfStockCount.textContent = outOfStockProducts;
+
+        // Update secondary text
+        if (totalChange) totalChange.textContent = `${totalProducts} total products`;
+        if (inStockChange) inStockChange.textContent = inStockProducts > 0 ? 'Good availability' : 'No products in stock';
+        if (lowStockChange) lowStockChange.textContent = lowStockProducts > 0 ? 'Needs attention' : 'All stocked well';
+        if (outOfStockChange) outOfStockChange.textContent = `${outOfStockProducts} out of stock`;
+    }
+
     attachEventListeners() {
         // Manage Categories button
         const manageCategoriesBtn = document.getElementById('manageCategoriesBtn');
@@ -225,6 +257,7 @@ class Products {
 
             this.saveProducts();
             this.displayProducts();
+            this.updateStats();
             alert('Product updated successfully!');
         }
     }
@@ -235,6 +268,7 @@ class Products {
             this.products.splice(index, 1);
             this.saveProducts();
             this.displayProducts();
+            this.updateStats();
             alert('Product deleted successfully!');
         }
     }
@@ -260,6 +294,13 @@ class Products {
         // Validation
         if (!name) {
             alert('Please enter a product name');
+            return;
+        }
+
+        // Check if product name already exists
+        const existingProduct = this.products.find(p => p.name.toLowerCase() === name.toLowerCase());
+        if (existingProduct) {
+            alert(`Product "${name}" is currently in stock. Please use a different product name.`);
             return;
         }
 
@@ -291,6 +332,7 @@ class Products {
         this.products.push(newProduct);
         this.saveProducts();
         this.displayProducts();
+        this.updateStats();
 
         // Close the modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('addProductModal'));
@@ -347,6 +389,7 @@ class Products {
             this.populateCategoryDropdown();
             this.updateCategoriesList();
             this.displayProducts();
+            this.updateStats();
             
             alert(`Category "${category}" and ${productsInCategory} product(s) deleted successfully!`);
         }
