@@ -62,6 +62,27 @@
       letter-spacing: -0.3px;
     }
 
+    .shop-header {
+      padding: 2rem 2rem 0.75rem;
+    }
+
+    .shop-header-kicker {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--green);
+      margin-bottom: 0.35rem;
+      font-weight: 600;
+    }
+
+    .shop-header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 400;
+      letter-spacing: -0.04em;
+      color: var(--text);
+    }
+
     .nav-search {
       flex: 1;
       max-width: 440px;
@@ -501,22 +522,6 @@
     }
 
     .category-list li a.active .count { background: var(--green-mid); color: var(--green-dark); }
-
-    /* price range */
-    .price-row { display: flex; gap: 8px; margin-top: 4px; }
-    .price-input {
-      flex: 1;
-      height: 34px;
-      padding: 0 10px;
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      font-size: 13px;
-      font-family: 'DM Sans', sans-serif;
-      color: var(--text);
-      background: var(--bg);
-      outline: none;
-    }
-    .price-input:focus { border-color: var(--green); }
 
     /* rating filter */
     .rating-list { list-style: none; display: flex; flex-direction: column; gap: 4px; }
