@@ -6,8 +6,9 @@ $("#sign-in-button").click(function() {
     const customers = JSON.parse(localStorage.getItem('customers')) || [];
     const customer = customers.find(u => u.email === email && u.password === password);
     if (customer) {
+        localStorage.setItem('currentcustomer', JSON.stringify(customer));
         alert('Login successful!');
-        window.location.href = 'costumer.html';
+        window.location.href = 'shop.html';
         return;
     }
     
