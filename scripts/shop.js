@@ -6,100 +6,14 @@ const cartPanel = $("#cart_panel");
 const cartItemsContainer = $("#cart_items");
 const cartClose = $("#cart_close");
 const checkoutButton = $("#checkout_button");
-const productGrid = $("#product_grid");
-const resultsCount = $("#results_count");
-const categoryList = $("#category_list");
-const productSearch = $("#product_search");
+const productGrid = $(".product-grid");
+const resultsCount = $(".results-count");
+const categoryList = $(".category-list");
+const productSearch = $(".nav-search input");
 
 let allProducts = [];
 let activeCategory = 'All Products';
 let searchTerm = '';
-
-// Load and display categories in sidebar
-function loadCategories() {
-    const storedCategories = localStorage.getItem('productCategories');
-    let categories = [];
-    if (storedCategories) {
-        categories = JSON.parse(storedCategories);
-    } else {
-        // Default categories if none exist
-        categories = ['Footwear', 'Accessories', 'Headwear', 'Clothing', 'Electronics'];
-    }
-
-    // Load products to count per category
-    const storedProducts = localStorage.getItem('products');
-    let products = [];
-    if (storedProducts) {
-        products = JSON.parse(storedProducts);
-    }
-
-    // Count products per category
-    const categoryCounts = {};
-    categories.forEach(cat => categoryCounts[cat] = 0);
-    products.forEach(product => {
-        if (categoryCounts.hasOwnProperty(product.category)) {
-            categoryCounts[product.category]++;
-        }
-    });
-    const totalProducts = products.length;
-
-    const categoryList = $('.category-list');
-    if (categoryList.length > 0) {
-        // Keep "All Products" as first item
-        let categoryHtml = `<li><a href="#" class="active">All Products <span class="count">${totalProducts}</span></a></li>`;
-
-        // Add dynamic categories
-        categories.forEach(category => {
-            const count = categoryCounts[category] || 0;
-            categoryHtml += `<li><a href="#">${category} <span class="count">${count}</span></a></li>`;
-        });
-
-        categoryList.html(categoryHtml);
-    }
-}
-
-// Load and display categories in sidebar
-function loadCategories() {
-    const storedCategories = localStorage.getItem('productCategories');
-    let categories = [];
-    if (storedCategories) {
-        categories = JSON.parse(storedCategories);
-    } else {
-        // Default categories if none exist
-        categories = ['Footwear', 'Accessories', 'Headwear', 'Clothing', 'Electronics'];
-    }
-
-    // Load products to count per category
-    const storedProducts = localStorage.getItem('products');
-    let products = [];
-    if (storedProducts) {
-        products = JSON.parse(storedProducts);
-    }
-
-    // Count products per category
-    const categoryCounts = {};
-    categories.forEach(cat => categoryCounts[cat] = 0);
-    products.forEach(product => {
-        if (categoryCounts.hasOwnProperty(product.category)) {
-            categoryCounts[product.category]++;
-        }
-    });
-    const totalProducts = products.length;
-
-    const categoryList = $('.category-list');
-    if (categoryList.length > 0) {
-        // Keep "All Products" as first item
-        let categoryHtml = `<li><a href="#" class="active">All Products <span class="count">${totalProducts}</span></a></li>`;
-
-        // Add dynamic categories
-        categories.forEach(category => {
-            const count = categoryCounts[category] || 0;
-            categoryHtml += `<li><a href="#">${category} <span class="count">${count}</span></a></li>`;
-        });
-
-        categoryList.html(categoryHtml);
-    }
-}
 
 function isLoggedIn() {
     return currentCustomer && currentCustomer.name;
@@ -206,23 +120,25 @@ function renderProducts() {
         const safeName = escapeHtml(product.name);
         const safeCategory = escapeHtml(product.category);
         const safePrice = escapeHtml(product.price);
-        const stockLabel = product.stock > 0 ? `${product.stock} in stock` : 'Out of stock';
-        const buttonDisabled = product.stock <= 0 ? 'disabled' : '';
-        const buttonLabel = product.stock > 0 ? 'Add to cart' : 'Unavailable';
+        const inStock = product.stock > 0;
+        const stockLabel = inStock ? `${product.stock} in stock` : 'Out of stock';
+        const stockBadgeClass = inStock ? 'badge-new' : 'badge-sale';
+        const buttonDisabled = !inStock ? 'disabled' : '';
+        const buttonLabel = inStock ? 'Add to bag' : 'Unavailable';
 
         return `
             <article class="product-card" data-product-id="${escapeHtml(product.id)}">
-                <div class="product-media">
-                    <button class="product-wishlist" aria-label="Save ${safeName}">+</button>
-                    <div class="product-badge">${escapeHtml(stockLabel)}</div>
+                <div class="product-img">
+                    <span class="product-badge ${stockBadgeClass}">${escapeHtml(stockLabel)}</span>
+
                 </div>
-                <div class="product-content">
+                <div class="product-info">
                     <p class="product-category">${safeCategory}</p>
                     <h3 class="product-name">${safeName}</h3>
-                    <div class="product-price-row">
+                    <div class="product-footer">
                         <span class="price-current">${safePrice}</span>
+                        <button class="add-to-cart" ${buttonDisabled} title="${buttonLabel}">${buttonLabel}</button>
                     </div>
-                    <button class="product-quick-add add-to-cart" ${buttonDisabled}>${buttonLabel}</button>
                 </div>
             </article>
         `;
@@ -365,41 +281,16 @@ $(document).on('click', '.add-to-cart', function() {
     }
 });
 
-<<<<<<< Updated upstream
-=======
-<<<<<<< HEAD
+// Listen for product changes from admin panel (other tabs)
 $(window).on('storage', function(event) {
     if (event.originalEvent.key === 'products') {
         refreshShopProducts();
     }
 });
 
+// Initialize shop on page load
 $(function() {
     refreshShopProducts();
-=======
->>>>>>> Stashed changes
-// Initialize categories on page load
-$(document).ready(function() {
-    loadCategories();
-});
-
-// Handle category selection
-$(document).on('click', '.category-list a', function(e) {
-    e.preventDefault();
-    
-    // Remove active class from all category links
-    $('.category-list a').removeClass('active');
-    
-    // Add active class to clicked link
-    $(this).addClass('active');
-    
-    // Optional: You can store the selected category for later use
-    const selectedCategory = $(this).text().split(' <span')[0]; // Extract category name without count
-    console.log('Selected category:', selectedCategory);
-<<<<<<< Updated upstream
-=======
->>>>>>> c01308dc77acfb83cdac7799b11abb683a808164
->>>>>>> Stashed changes
 });
 
 
