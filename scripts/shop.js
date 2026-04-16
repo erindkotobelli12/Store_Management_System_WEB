@@ -6,6 +6,57 @@ const cartPanel = $("#cart_panel");
 const cartItemsContainer = $("#cart_items");
 const cartClose = $("#cart_close");
 const checkoutButton = $("#checkout_button");
+const productGrid = $("#product_grid");
+const resultsCount = $("#results_count");
+const categoryList = $("#category_list");
+const productSearch = $("#product_search");
+
+let allProducts = [];
+let activeCategory = 'All Products';
+let searchTerm = '';
+
+// Load and display categories in sidebar
+function loadCategories() {
+    const storedCategories = localStorage.getItem('productCategories');
+    let categories = [];
+    if (storedCategories) {
+        categories = JSON.parse(storedCategories);
+    } else {
+        // Default categories if none exist
+        categories = ['Footwear', 'Accessories', 'Headwear', 'Clothing', 'Electronics'];
+    }
+
+    // Load products to count per category
+    const storedProducts = localStorage.getItem('products');
+    let products = [];
+    if (storedProducts) {
+        products = JSON.parse(storedProducts);
+    }
+
+    // Count products per category
+    const categoryCounts = {};
+    categories.forEach(cat => categoryCounts[cat] = 0);
+    products.forEach(product => {
+        if (categoryCounts.hasOwnProperty(product.category)) {
+            categoryCounts[product.category]++;
+        }
+    });
+    const totalProducts = products.length;
+
+    const categoryList = $('.category-list');
+    if (categoryList.length > 0) {
+        // Keep "All Products" as first item
+        let categoryHtml = `<li><a href="#" class="active">All Products <span class="count">${totalProducts}</span></a></li>`;
+
+        // Add dynamic categories
+        categories.forEach(category => {
+            const count = categoryCounts[category] || 0;
+            categoryHtml += `<li><a href="#">${category} <span class="count">${count}</span></a></li>`;
+        });
+
+        categoryList.html(categoryHtml);
+    }
+}
 
 // Load and display categories in sidebar
 function loadCategories() {
@@ -67,6 +118,121 @@ function saveCurrentCustomer() {
         customers[index].shoppingCart = currentCustomer.shoppingCart || [];
         localStorage.setItem('customers', JSON.stringify(customers));
     }
+}
+
+function normalizePrice(price) {
+    if (typeof price === 'number') {
+        return `$${price.toFixed(2)}`;
+    }
+
+    if (typeof price !== 'string') {
+        return '$0.00';
+    }
+
+    const trimmedPrice = price.trim();
+    return trimmedPrice.startsWith('$') ? trimmedPrice : `$${trimmedPrice}`;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function loadProducts() {
+    const storedProducts = JSON.parse(localStorage.getItem('products')) || [];
+
+    allProducts = storedProducts.map((product, index) => ({
+        id: product.id || `#PRD-${String(index + 1).padStart(3, '0')}`,
+        name: product.name || 'Unnamed Product',
+        category: product.category || 'Uncategorized',
+        price: normalizePrice(product.price),
+        stock: Number.isFinite(product.stock) ? product.stock : parseInt(product.stock, 10) || 0,
+        status: product.status || 'Active'
+    }));
+}
+
+function getFilteredProducts() {
+    return allProducts.filter(product => {
+        const matchesCategory = activeCategory === 'All Products' || product.category === activeCategory;
+        const matchesSearch = !searchTerm
+            || product.name.toLowerCase().includes(searchTerm)
+            || product.category.toLowerCase().includes(searchTerm)
+            || product.id.toLowerCase().includes(searchTerm);
+
+        return matchesCategory && matchesSearch;
+    });
+}
+
+function renderCategories() {
+    if (!categoryList.length) return;
+
+    const counts = allProducts.reduce((categoryCounts, product) => {
+        categoryCounts[product.category] = (categoryCounts[product.category] || 0) + 1;
+        return categoryCounts;
+    }, {});
+
+    const categoryItems = ['All Products', ...Object.keys(counts).sort((first, second) => first.localeCompare(second))];
+
+    categoryList.html(categoryItems.map(category => {
+        const count = category === 'All Products' ? allProducts.length : counts[category];
+        const activeClass = category === activeCategory ? 'active' : '';
+        const safeCategory = escapeHtml(category);
+
+        return `<li><a href="#" class="${activeClass}" data-category="${safeCategory}">${safeCategory} <span class="count">${count}</span></a></li>`;
+    }).join(''));
+}
+
+function renderProducts() {
+    if (!productGrid.length) return;
+
+    const filteredProducts = getFilteredProducts();
+    resultsCount.text(`${filteredProducts.length} product${filteredProducts.length === 1 ? '' : 's'}`);
+
+    if (filteredProducts.length === 0) {
+        productGrid.html(`
+            <div class="product-card" style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
+                <p class="product-category">No products found</p>
+                <h3 class="product-name">Try another search or category.</h3>
+            </div>
+        `);
+        return;
+    }
+
+    productGrid.html(filteredProducts.map(product => {
+        const safeName = escapeHtml(product.name);
+        const safeCategory = escapeHtml(product.category);
+        const safePrice = escapeHtml(product.price);
+        const stockLabel = product.stock > 0 ? `${product.stock} in stock` : 'Out of stock';
+        const buttonDisabled = product.stock <= 0 ? 'disabled' : '';
+        const buttonLabel = product.stock > 0 ? 'Add to cart' : 'Unavailable';
+
+        return `
+            <article class="product-card" data-product-id="${escapeHtml(product.id)}">
+                <div class="product-media">
+                    <button class="product-wishlist" aria-label="Save ${safeName}">+</button>
+                    <div class="product-badge">${escapeHtml(stockLabel)}</div>
+                </div>
+                <div class="product-content">
+                    <p class="product-category">${safeCategory}</p>
+                    <h3 class="product-name">${safeName}</h3>
+                    <div class="product-price-row">
+                        <span class="price-current">${safePrice}</span>
+                    </div>
+                    <button class="product-quick-add add-to-cart" ${buttonDisabled}>${buttonLabel}</button>
+                </div>
+            </article>
+        `;
+    }).join(''));
+}
+
+function refreshShopProducts() {
+    loadProducts();
+    renderCategories();
+    renderProducts();
 }
 
 function renderCartItems() {
@@ -153,9 +319,25 @@ $(document).on('click', '.cart-item-delete', function() {
     }
 });
 
-$(".add-to-cart").click(function() {
+$(document).on('click', '.category-list a', function(event) {
+    event.preventDefault();
+    activeCategory = $(this).data('category') || 'All Products';
+    renderCategories();
+    renderProducts();
+});
+
+productSearch.on('input', function() {
+    searchTerm = $(this).val().trim().toLowerCase();
+    renderProducts();
+});
+
+$(document).on('click', '.add-to-cart', function() {
     if (!isLoggedIn()) {
         alert('Please log in to add items to your bag.');
+        return;
+    }
+
+    if ($(this).is(':disabled')) {
         return;
     }
 
@@ -183,6 +365,19 @@ $(".add-to-cart").click(function() {
     }
 });
 
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+$(window).on('storage', function(event) {
+    if (event.originalEvent.key === 'products') {
+        refreshShopProducts();
+    }
+});
+
+$(function() {
+    refreshShopProducts();
+=======
+>>>>>>> Stashed changes
 // Initialize categories on page load
 $(document).ready(function() {
     loadCategories();
@@ -201,6 +396,10 @@ $(document).on('click', '.category-list a', function(e) {
     // Optional: You can store the selected category for later use
     const selectedCategory = $(this).text().split(' <span')[0]; // Extract category name without count
     console.log('Selected category:', selectedCategory);
+<<<<<<< Updated upstream
+=======
+>>>>>>> c01308dc77acfb83cdac7799b11abb683a808164
+>>>>>>> Stashed changes
 });
 
 
