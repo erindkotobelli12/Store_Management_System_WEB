@@ -7,6 +7,49 @@ const cartItemsContainer = $("#cart_items");
 const cartClose = $("#cart_close");
 const checkoutButton = $("#checkout_button");
 
+// Load and display categories in sidebar
+function loadCategories() {
+    const storedCategories = localStorage.getItem('productCategories');
+    let categories = [];
+    if (storedCategories) {
+        categories = JSON.parse(storedCategories);
+    } else {
+        // Default categories if none exist
+        categories = ['Footwear', 'Accessories', 'Headwear', 'Clothing', 'Electronics'];
+    }
+
+    // Load products to count per category
+    const storedProducts = localStorage.getItem('products');
+    let products = [];
+    if (storedProducts) {
+        products = JSON.parse(storedProducts);
+    }
+
+    // Count products per category
+    const categoryCounts = {};
+    categories.forEach(cat => categoryCounts[cat] = 0);
+    products.forEach(product => {
+        if (categoryCounts.hasOwnProperty(product.category)) {
+            categoryCounts[product.category]++;
+        }
+    });
+    const totalProducts = products.length;
+
+    const categoryList = $('.category-list');
+    if (categoryList.length > 0) {
+        // Keep "All Products" as first item
+        let categoryHtml = `<li><a href="#" class="active">All Products <span class="count">${totalProducts}</span></a></li>`;
+
+        // Add dynamic categories
+        categories.forEach(category => {
+            const count = categoryCounts[category] || 0;
+            categoryHtml += `<li><a href="#">${category} <span class="count">${count}</span></a></li>`;
+        });
+
+        categoryList.html(categoryHtml);
+    }
+}
+
 function isLoggedIn() {
     return currentCustomer && currentCustomer.name;
 }
@@ -138,6 +181,26 @@ $(".add-to-cart").click(function() {
     if (!cartPanel.hasClass('hidden')) {
         renderCartItems();
     }
+});
+
+// Initialize categories on page load
+$(document).ready(function() {
+    loadCategories();
+});
+
+// Handle category selection
+$(document).on('click', '.category-list a', function(e) {
+    e.preventDefault();
+    
+    // Remove active class from all category links
+    $('.category-list a').removeClass('active');
+    
+    // Add active class to clicked link
+    $(this).addClass('active');
+    
+    // Optional: You can store the selected category for later use
+    const selectedCategory = $(this).text().split(' <span')[0]; // Extract category name without count
+    console.log('Selected category:', selectedCategory);
 });
 
 
