@@ -316,6 +316,10 @@ $(document).on('click', '.add-to-cart', function() {
         return;
     }
 
+    if ($(this).is(':disabled')) {
+        return;
+    }
+
     const productCard = $(this).closest('.product-card');
     const name = productCard.find('.product-name').text().trim();
     const category = productCard.find('.product-category').text().trim();
