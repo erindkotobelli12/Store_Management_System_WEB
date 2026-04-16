@@ -6,49 +6,14 @@ const cartPanel = $("#cart_panel");
 const cartItemsContainer = $("#cart_items");
 const cartClose = $("#cart_close");
 const checkoutButton = $("#checkout_button");
+const productGrid = $(".product-grid");
+const resultsCount = $(".results-count");
+const categoryList = $(".category-list");
+const productSearch = $(".nav-search input");
 
-// Load and display categories in sidebar
-function loadCategories() {
-    const storedCategories = localStorage.getItem('productCategories');
-    let categories = [];
-    if (storedCategories) {
-        categories = JSON.parse(storedCategories);
-    } else {
-        // Default categories if none exist
-        categories = ['Footwear', 'Accessories', 'Headwear', 'Clothing', 'Electronics'];
-    }
-
-    // Load products to count per category
-    const storedProducts = localStorage.getItem('products');
-    let products = [];
-    if (storedProducts) {
-        products = JSON.parse(storedProducts);
-    }
-
-    // Count products per category
-    const categoryCounts = {};
-    categories.forEach(cat => categoryCounts[cat] = 0);
-    products.forEach(product => {
-        if (categoryCounts.hasOwnProperty(product.category)) {
-            categoryCounts[product.category]++;
-        }
-    });
-    const totalProducts = products.length;
-
-    const categoryList = $('.category-list');
-    if (categoryList.length > 0) {
-        // Keep "All Products" as first item
-        let categoryHtml = `<li><a href="#" class="active">All Products <span class="count">${totalProducts}</span></a></li>`;
-
-        // Add dynamic categories
-        categories.forEach(category => {
-            const count = categoryCounts[category] || 0;
-            categoryHtml += `<li><a href="#">${category} <span class="count">${count}</span></a></li>`;
-        });
-
-        categoryList.html(categoryHtml);
-    }
-}
+let allProducts = [];
+let activeCategory = 'All Products';
+let searchTerm = '';
 
 function isLoggedIn() {
     return currentCustomer && currentCustomer.name;
@@ -67,6 +32,166 @@ function saveCurrentCustomer() {
         customers[index].shoppingCart = currentCustomer.shoppingCart || [];
         localStorage.setItem('customers', JSON.stringify(customers));
     }
+}
+
+function getOrders() {
+    return JSON.parse(localStorage.getItem('orders')) || [];
+}
+
+function saveOrders(orders) {
+    localStorage.setItem('orders', JSON.stringify(orders));
+}
+
+function generateOrderId() {
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 900) + 100;
+    return `#ORD-${timestamp.toString().slice(-5)}${random}`;
+}
+
+function calculateCartTotal(cart) {
+    return cart.reduce((total, item) => {
+        const amount = parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 0;
+        return total + amount * item.quantity;
+    }, 0);
+}
+
+function clearCart() {
+    if (!currentCustomer) return;
+    currentCustomer.shoppingCart = [];
+    saveCurrentCustomer();
+}
+
+function normalizePrice(price) {
+    if (typeof price === 'number') {
+        return `$${price.toFixed(2)}`;
+    }
+
+    if (typeof price !== 'string') {
+        return '$0.00';
+    }
+
+    const trimmedPrice = price.trim();
+    return trimmedPrice.startsWith('$') ? trimmedPrice : `$${trimmedPrice}`;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function loadProducts() {
+    let storedProducts = JSON.parse(localStorage.getItem('products'));
+
+    if (!storedProducts || storedProducts.length === 0) {
+        storedProducts = [
+            { id: '#PRD-001', name: 'Air Zoom Pro',      category: 'Footwear',    price: '$89.99',  stock: 210, status: 'Active' },
+            { id: '#PRD-002', name: 'Urban Pack XL',     category: 'Accessories', price: '$129.99', stock: 154, status: 'Active' },
+            { id: '#PRD-003', name: 'Classic Snapback',  category: 'Headwear',    price: '$49.99',  stock: 15,  status: 'Low Stock' },
+            { id: '#PRD-004', name: 'Graphic Tee Pack',  category: 'Clothing',    price: '$29.99',  stock: 0,   status: 'Out of Stock' },
+            { id: '#PRD-005', name: 'Sport Watch S2',    category: 'Electronics', price: '$199.99', stock: 62,  status: 'Active' }
+        ];
+        localStorage.setItem('products', JSON.stringify(storedProducts));
+    }
+
+    allProducts = storedProducts.map((product, index) => ({
+        id: product.id || `#PRD-${String(index + 1).padStart(3, '0')}`,
+        name: product.name || 'Unnamed Product',
+        category: product.category || 'Uncategorized',
+        price: normalizePrice(product.price),
+        stock: Number.isFinite(product.stock) ? product.stock : parseInt(product.stock, 10) || 0,
+        status: product.status || 'Active'
+    }));
+}
+
+function getFilteredProducts() {
+    return allProducts.filter(product => {
+        const matchesCategory = activeCategory === 'All Products' || product.category === activeCategory;
+        const matchesSearch = !searchTerm
+            || product.name.toLowerCase().includes(searchTerm)
+            || product.category.toLowerCase().includes(searchTerm)
+            || product.id.toLowerCase().includes(searchTerm);
+
+        return matchesCategory && matchesSearch;
+    });
+}
+
+function renderCategories() {
+    if (!categoryList.length) return;
+
+    const counts = allProducts.reduce((categoryCounts, product) => {
+        categoryCounts[product.category] = (categoryCounts[product.category] || 0) + 1;
+        return categoryCounts;
+    }, {});
+
+    const adminCategories = JSON.parse(localStorage.getItem('productCategories')) || [];
+    adminCategories.forEach(cat => {
+        if (!(cat in counts)) counts[cat] = 0;
+    });
+
+    const categoryItems = ['All Products', ...Object.keys(counts).sort((first, second) => first.localeCompare(second))];
+
+    categoryList.html(categoryItems.map(category => {
+        const count = category === 'All Products' ? allProducts.length : counts[category];
+        const activeClass = category === activeCategory ? 'active' : '';
+        const safeCategory = escapeHtml(category);
+
+        return `<li><a href="#" class="${activeClass}" data-category="${safeCategory}">${safeCategory} <span class="count">${count}</span></a></li>`;
+    }).join(''));
+}
+
+function renderProducts() {
+    if (!productGrid.length) return;
+
+    const filteredProducts = getFilteredProducts();
+    resultsCount.text(`${filteredProducts.length} product${filteredProducts.length === 1 ? '' : 's'}`);
+
+    if (filteredProducts.length === 0) {
+        productGrid.html(`
+            <div class="product-card" style="grid-column: 1 / -1; text-align: center; padding: 2rem;">
+                <p class="product-category">No products found</p>
+                <h3 class="product-name">Try another search or category.</h3>
+            </div>
+        `);
+        return;
+    }
+
+    productGrid.html(filteredProducts.map(product => {
+        const safeName = escapeHtml(product.name);
+        const safeCategory = escapeHtml(product.category);
+        const safePrice = escapeHtml(product.price);
+        const inStock = product.stock > 0;
+        const stockLabel = inStock ? `${product.stock} in stock` : 'Out of stock';
+        const stockBadgeClass = inStock ? 'badge-new' : 'badge-sale';
+        const buttonDisabled = !inStock ? 'disabled' : '';
+        const buttonLabel = inStock ? 'Add to bag' : 'Unavailable';
+
+        return `
+            <article class="product-card" data-product-id="${escapeHtml(product.id)}">
+                <div class="product-img">
+                    <span class="product-badge ${stockBadgeClass}">${escapeHtml(stockLabel)}</span>
+
+                </div>
+                <div class="product-info">
+                    <p class="product-category">${safeCategory}</p>
+                    <h3 class="product-name">${safeName}</h3>
+                    <div class="product-footer">
+                        <span class="price-current">${safePrice}</span>
+                        <button class="add-to-cart" ${buttonDisabled} title="${buttonLabel}">${buttonLabel}</button>
+                    </div>
+                </div>
+            </article>
+        `;
+    }).join(''));
+}
+
+function refreshShopProducts() {
+    loadProducts();
+    renderCategories();
+    renderProducts();
 }
 
 function renderCartItems() {
@@ -129,7 +254,27 @@ checkoutButton.click(function() {
     if (!isLoggedIn()) return;
     const cart = getCart();
     if (!cart || cart.length === 0) return;
-    alert('Proceeding to checkout...');
+
+    const orders = getOrders();
+    const totalAmount = calculateCartTotal(cart);
+    const productSummary = cart.map(item => `${item.name} × ${item.quantity}`).join(', ');
+
+    const order = {
+        id: generateOrderId(),
+        customer: currentCustomer.name || currentCustomer.email || 'Guest',
+        product: productSummary,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        amount: `$${totalAmount.toFixed(2)}`,
+        status: 'Pending'
+    };
+
+    orders.unshift(order);
+    saveOrders(orders);
+    clearCart();
+    renderCartItems();
+    cartPanel.addClass('hidden');
+    cartPanel.attr('aria-hidden', 'true');
+    alert('Your order has been placed.');
 });
 
 $(document).click(function(event) {
@@ -153,7 +298,19 @@ $(document).on('click', '.cart-item-delete', function() {
     }
 });
 
-$(".add-to-cart").click(function() {
+$(document).on('click', '.category-list a', function(event) {
+    event.preventDefault();
+    activeCategory = $(this).data('category') || 'All Products';
+    renderCategories();
+    renderProducts();
+});
+
+productSearch.on('input', function() {
+    searchTerm = $(this).val().trim().toLowerCase();
+    renderProducts();
+});
+
+$(document).on('click', '.add-to-cart', function() {
     if (!isLoggedIn()) {
         alert('Please log in to add items to your bag.');
         return;
@@ -183,24 +340,16 @@ $(".add-to-cart").click(function() {
     }
 });
 
-// Initialize categories on page load
-$(document).ready(function() {
-    loadCategories();
+// Listen for product changes from admin panel (other tabs)
+$(window).on('storage', function(event) {
+    if (event.originalEvent.key === 'products') {
+        refreshShopProducts();
+    }
 });
 
-// Handle category selection
-$(document).on('click', '.category-list a', function(e) {
-    e.preventDefault();
-    
-    // Remove active class from all category links
-    $('.category-list a').removeClass('active');
-    
-    // Add active class to clicked link
-    $(this).addClass('active');
-    
-    // Optional: You can store the selected category for later use
-    const selectedCategory = $(this).text().split(' <span')[0]; // Extract category name without count
-    console.log('Selected category:', selectedCategory);
+// Initialize shop on page load
+$(function() {
+    refreshShopProducts();
 });
 
 
