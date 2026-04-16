@@ -164,10 +164,6 @@ body {
     margin-bottom: 15px;
 }
 
-.stat-card-icon.revenue {
-    color: #28a745;
-}
-
 .stat-card-icon.orders {
     color: #0d6efd;
 }

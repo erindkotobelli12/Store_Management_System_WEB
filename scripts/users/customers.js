@@ -12,65 +12,65 @@ class Customers {
     }
 
     loadCustomers() {
-        // Load customers from localStorage or use sample data
+        // Load customers from localStorage (registered users only)
         const storedCustomers = localStorage.getItem('customers');
         if (storedCustomers) {
-            this.customers = JSON.parse(storedCustomers);
+            const rawCustomers = JSON.parse(storedCustomers);
+            // Transform stored customers to display format
+            this.customers = rawCustomers.map((customer, index) => {
+                // Generate phone if not present
+                const phone = customer.phone || '+1 (555) ' + String(100 + index * 111).padStart(4, '0');
+                return {
+                    id: `#CUST-${String(index + 1).padStart(3, '0')}`,
+                    name: `${customer.name || ''} ${customer.surname || ''}`.trim(),
+                    email: customer.email,
+                    phone: phone,
+                    orders: customer.orders || 0,
+                    spent: customer.spent || '$0.00',
+                    joinDate: customer.joinDate || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+                    status: customer.status || 'Active'
+                };
+            });
         } else {
-            // Initialize with sample customers
-            this.customers = [
-                {
-                    id: '#CUST-001',
-                    name: 'Ana Leka',
-                    email: 'ana.leka@email.com',
-                    phone: '+1 (555) 123-4567',
-                    orders: 24,
-                    spent: '$2,485.50',
-                    joinDate: 'Jan 15, 2024',
-                    status: 'Active'
-                },
-                {
-                    id: '#CUST-002',
-                    name: 'James Brown',
-                    email: 'james.brown@email.com',
-                    phone: '+1 (555) 234-5678',
-                    orders: 18,
-                    spent: '$1,845.75',
-                    joinDate: 'Mar 22, 2024',
-                    status: 'Active'
-                },
-                {
-                    id: '#CUST-003',
-                    name: 'Maria Johnson',
-                    email: 'maria.johnson@email.com',
-                    phone: '+1 (555) 345-6789',
-                    orders: 31,
-                    spent: '$3,245.20',
-                    joinDate: 'Dec 10, 2023',
-                    status: 'Active'
-                },
-                {
-                    id: '#CUST-004',
-                    name: 'Robert Chen',
-                    email: 'robert.chen@email.com',
-                    phone: '+1 (555) 456-7890',
-                    orders: 12,
-                    spent: '$1,125.40',
-                    joinDate: 'May 05, 2024',
-                    status: 'Inactive'
-                },
-                {
-                    id: '#CUST-005',
-                    name: 'Sarah Rivera',
-                    email: 'sarah.rivera@email.com',
-                    phone: '+1 (555) 567-8901',
-                    orders: 42,
-                    spent: '$4,562.80',
-                    joinDate: 'Aug 18, 2023',
-                    status: 'Active'
-                }
-            ];
-            this.saveCustomers();
+            // No registered customers yet
+            this.customers = [];
+        }
+        this.displayCustomers();
+        this.updateStats();
+    }
+
+    updateStats() {
+        const totalCustomers = this.customers.length;
+        const activeCustomers = this.customers.filter(c => c.status === 'Active').length;
+        
+        // Count customers registered this month
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth();
+        const currentYear = currentDate.getFullYear();
+        
+        const newCustomers = this.customers.filter(c => {
+            const joinDate = new Date(c.joinDate);
+            return joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear;
+        }).length;
+
+        // Update stat elements
+        const totalCustomersEl = document.getElementById('totalCustomersCount');
+        const newCustomersEl = document.getElementById('newCustomersCount');
+        const activeCustomersEl = document.getElementById('activeCustomersCount');
+
+        if (totalCustomersEl) totalCustomersEl.textContent = totalCustomers;
+        if (newCustomersEl) newCustomersEl.textContent = newCustomers;
+        if (activeCustomersEl) activeCustomersEl.textContent = activeCustomers;
+        
+        // Also update dashboard stats if they exist
+        this.updateDashboardStats();
+    }
+
+    updateDashboardStats() {
+        const dashboardTotalCustomers = document.getElementById('dashboardTotalCustomers');
+        if (dashboardTotalCustomers) {
+            // Update dashboard with total customers count
+            dashboardTotalCustomers.textContent = this.customers.length;
         }
     }
 
@@ -147,6 +147,7 @@ class Customers {
             this.customers[index].status = newStatus;
             this.saveCustomers();
             this.displayCustomers();
+            this.updateStats();
             alert('Customer updated successfully!');
         }
     }
@@ -157,6 +158,7 @@ class Customers {
             this.customers.splice(index, 1);
             this.saveCustomers();
             this.displayCustomers();
+            this.updateStats();
             alert('Customer deleted successfully!');
         }
     }
@@ -185,6 +187,7 @@ class Customers {
         this.customers.push(newCustomer);
         this.saveCustomers();
         this.displayCustomers();
+        this.updateStats();
         alert('Customer added successfully!');
     }
 }

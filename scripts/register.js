@@ -19,6 +19,9 @@ $("#create-account-button").click(function() {
     }
 
     const newCustomer = new Customer(email, password, firstname, lastname);
+    // Add registration date
+    newCustomer.joinDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    newCustomer.status = 'Active';
 
     customers.push(newCustomer);
     localStorage.setItem('customers', JSON.stringify(customers));
