@@ -37,27 +37,75 @@ if (document.readyState === 'loading') {
 function updateDashboardStats() {
     // Load customers from localStorage
     const storedCustomers = localStorage.getItem('customers');
-    console.log('Stored customers from localStorage:', storedCustomers);
-    
     const allCustomers = storedCustomers ? JSON.parse(storedCustomers) : [];
-    console.log('Parsed customers array:', allCustomers);
-    console.log('Total customers count:', allCustomers.length);
+    
+    // Load orders from localStorage
+    const storedOrders = localStorage.getItem('orders');
+    const allOrders = storedOrders ? JSON.parse(storedOrders) : [];
+    
+    console.log('Total customers:', allCustomers.length);
+    console.log('Total orders:', allOrders.length);
     
     // Count all customers (same logic as customers.js)
     const totalCustomers = allCustomers.length;
+    const totalOrders = allOrders.length;
     
     // Update total customers
     const totalCustomersEl = document.getElementById('dashboardTotalCustomers');
     if (totalCustomersEl) {
         totalCustomersEl.textContent = totalCustomers;
         console.log('Updated dashboard total customers to:', totalCustomers);
-    } else {
-        console.log('dashboardTotalCustomers element not found');
     }
     
     // Update total orders
     const totalOrdersEl = document.getElementById('dashboardTotalOrders');
     if (totalOrdersEl) {
-        totalOrdersEl.textContent = '0';
+        totalOrdersEl.textContent = totalOrders;
+        console.log('Updated dashboard total orders to:', totalOrders);
     }
+    
+    // Display recent orders (only real orders, filter out hardcoded ones)
+    displayRecentOrders();
+}
+
+function displayRecentOrders() {
+    const tableBody = document.getElementById('recentOrdersTableBody');
+    if (!tableBody) return;
+    
+    // Load orders from localStorage
+    const storedOrders = localStorage.getItem('orders');
+    let orders = storedOrders ? JSON.parse(storedOrders) : [];
+    
+    // Filter out hardcoded sample orders, keep only real ones
+    const hardcodedCustomers = ['Ana Leka', 'James Brown', 'Maria Johnson', 'Robert Chen', 'Sarah Rivera'];
+    orders = orders.filter(order => !hardcodedCustomers.includes(order.customer));
+    
+    if (orders.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #999;">No orders yet</td></tr>';
+        return;
+    }
+    
+    // Show only the last 5 recent orders
+    const recentOrders = orders.slice(-5).reverse();
+    
+    tableBody.innerHTML = recentOrders.map(order => {
+        const initials = order.customer.substring(0, 2).toUpperCase();
+        const badgeClass = order.status === 'Delivered' ? 'badge-delivered' : 'badge-pending';
+        
+        return `
+            <tr>
+                <td>${order.id}</td>
+                <td>
+                    <span style="background: #28a745; color: white; padding: 5px 10px; border-radius: 4px; font-weight: bold; font-size: 12px;">
+                        ${initials}
+                    </span>
+                    <span style="margin-left: 10px;">${order.customer}</span>
+                </td>
+                <td>${order.product}</td>
+                <td>${order.date}</td>
+                <td>${order.amount}</td>
+                <td><span class="badge badge-status ${badgeClass}">${order.status}</span></td>
+            </tr>
+        `;
+    }).join('');
 }
