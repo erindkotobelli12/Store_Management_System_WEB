@@ -22,7 +22,7 @@ class Products {
             this.categories = JSON.parse(storedCategories);
         } else {
             // Default categories
-            this.categories = ['Footwear', 'Accessories', 'Headwear', 'Clothing', 'Electronics'];
+            this.categories = [];
             this.saveCategories();
         }
     }
@@ -68,13 +68,7 @@ class Products {
         if (storedProducts) {
             this.products = JSON.parse(storedProducts);
         } else {
-            this.products = [
-                { id: '#PRD-001', name: 'Air Zoom Pro',    category: 'Footwear',    price: '$89.99',  stock: 210, sales: 1240, status: 'Active' },
-                { id: '#PRD-002', name: 'Urban Pack XL',   category: 'Accessories', price: '$129.99', stock: 154, sales: 987,  status: 'Active' },
-                { id: '#PRD-003', name: 'Classic Snapback', category: 'Headwear',   price: '$49.99',  stock: 15,  sales: 2145, status: 'Low Stock' },
-                { id: '#PRD-004', name: 'Graphic Tee Pack', category: 'Clothing',   price: '$29.99',  stock: 0,   sales: 1876, status: 'Out of Stock' },
-                { id: '#PRD-005', name: 'Sport Watch S2',  category: 'Electronics', price: '$199.99', stock: 62,  sales: 542,  status: 'Active' }
-            ];
+            this.products = [];
             this.saveProducts();
         }
     }

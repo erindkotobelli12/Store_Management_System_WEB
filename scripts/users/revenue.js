@@ -10,7 +10,6 @@ class Revenue {
         this.loadOrders();
         this.updateStats();
         this.displayRevenueTrend();
-        this.displayRevenueByCategory();
         this.displayTransactions();
     }
 
@@ -73,68 +72,6 @@ class Revenue {
         }).join('');
     }
 
-    displayRevenueByCategory() {
-        const container = document.getElementById('revenueByCategoryContainer');
-        if (!container) return;
-
-        // Load products to map product names to categories
-        const storedProducts = localStorage.getItem('products');
-        const products = storedProducts ? JSON.parse(storedProducts) : [];
-
-        // Calculate revenue by category
-        const categoryRevenue = {};
-        this.orders.forEach(order => {
-            // Each order.product is like "Air Zoom Pro × 1, Urban Pack XL × 2"
-            const items = order.product.split(', ');
-            const orderAmount = this.parseAmount(order.amount);
-
-            // Try to match products to categories
-            let matchedCategories = [];
-            items.forEach(item => {
-                const itemName = item.replace(/\s*×\s*\d+$/, '').trim();
-                const product = products.find(p => p.name === itemName);
-                if (product) {
-                    matchedCategories.push(product.category);
-                }
-            });
-
-            if (matchedCategories.length > 0) {
-                // Split revenue equally among matched categories
-                const perCategory = orderAmount / matchedCategories.length;
-                matchedCategories.forEach(cat => {
-                    categoryRevenue[cat] = (categoryRevenue[cat] || 0) + perCategory;
-                });
-            } else {
-                categoryRevenue['Other'] = (categoryRevenue['Other'] || 0) + orderAmount;
-            }
-        });
-
-        const totalRevenue = Object.values(categoryRevenue).reduce((sum, val) => sum + val, 0);
-        const colors = ['#28a745', '#0d6efd', '#fd7e14', '#20c997', '#dc3545', '#6f42c1'];
-
-        if (totalRevenue === 0) {
-            container.innerHTML = '<p style="color: #999; text-align: center; padding: 20px;">No revenue data yet</p>';
-            return;
-        }
-
-        const sortedCategories = Object.entries(categoryRevenue).sort((a, b) => b[1] - a[1]);
-
-        container.innerHTML = sortedCategories.map(([category, revenue], index) => {
-            const percentage = (revenue / totalRevenue * 100).toFixed(0);
-            const color = colors[index % colors.length];
-            return `
-                <div style="margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                        <span style="font-weight: 500; color: #333;">${category}</span>
-                        <span style="color: ${color}; font-weight: bold;">$${revenue.toFixed(2)}</span>
-                    </div>
-                    <div style="background: #e9ecef; border-radius: 4px; height: 8px; overflow: hidden;">
-                        <div style="background: ${color}; height: 100%; width: ${percentage}%;"></div>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    }
 
     displayTransactions() {
         const tableBody = document.getElementById('revenueTableBody');
