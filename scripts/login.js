@@ -17,7 +17,7 @@ $("#sign-in-button").click(function() {
     
     // Initialize default admin if no admins exist
     if (admins.length === 0) {
-        const defaultAdmin = new Admin('admin@gmail.com', 'admin123', 'Andrea', 'Ogreni');
+        const defaultAdmin = new Admin('admin@gmail.com', 'admin123', 'admin', 'admin');
         admins.push(defaultAdmin);
         localStorage.setItem('admins', JSON.stringify(admins));
     }
