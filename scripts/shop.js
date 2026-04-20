@@ -84,18 +84,7 @@ function escapeHtml(value) {
 }
 
 function loadProducts() {
-    let storedProducts = JSON.parse(localStorage.getItem('products'));
-
-    if (!storedProducts || storedProducts.length === 0) {
-        storedProducts = [
-            { id: '#PRD-001', name: 'Air Zoom Pro',      category: 'Footwear',    price: '$89.99',  stock: 210, status: 'Active' },
-            { id: '#PRD-002', name: 'Urban Pack XL',     category: 'Accessories', price: '$129.99', stock: 154, status: 'Active' },
-            { id: '#PRD-003', name: 'Classic Snapback',  category: 'Headwear',    price: '$49.99',  stock: 15,  status: 'Low Stock' },
-            { id: '#PRD-004', name: 'Graphic Tee Pack',  category: 'Clothing',    price: '$29.99',  stock: 0,   status: 'Out of Stock' },
-            { id: '#PRD-005', name: 'Sport Watch S2',    category: 'Electronics', price: '$199.99', stock: 62,  status: 'Active' }
-        ];
-        localStorage.setItem('products', JSON.stringify(storedProducts));
-    }
+    const storedProducts = JSON.parse(localStorage.getItem('products')) || [];
 
     allProducts = storedProducts.map((product, index) => ({
         id: product.id || `#PRD-${String(index + 1).padStart(3, '0')}`,
@@ -261,17 +250,33 @@ checkoutButton.click(function() {
 
     const order = {
         id: generateOrderId(),
-        customer: currentCustomer.name || currentCustomer.email || 'Guest',
+        customer: `${currentCustomer.name || ''} ${currentCustomer.surname || ''}`.trim() || currentCustomer.email || 'Guest',
         product: productSummary,
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         amount: `$${totalAmount.toFixed(2)}`,
-        status: 'Pending'
+        status: 'Completed'
     };
+
+    // Deduct stock for each purchased item
+    const storedProducts = JSON.parse(localStorage.getItem('products')) || [];
+    cart.forEach(cartItem => {
+        const product = storedProducts.find(p => p.name === cartItem.name);
+        if (product) {
+            product.stock = Math.max(0, product.stock - cartItem.quantity);
+            if (product.stock === 0) {
+                product.status = 'Out of Stock';
+            } else if (product.stock < 50) {
+                product.status = 'Low Stock';
+            }
+        }
+    });
+    localStorage.setItem('products', JSON.stringify(storedProducts));
 
     orders.unshift(order);
     saveOrders(orders);
     clearCart();
     renderCartItems();
+    refreshShopProducts();
     cartPanel.addClass('hidden');
     cartPanel.attr('aria-hidden', 'true');
     alert('Your order has been placed.');
@@ -326,10 +331,18 @@ $(document).on('click', '.add-to-cart', function() {
     const price = productCard.find('.price-current').text().trim();
     const cart = getCart();
 
+    const product = allProducts.find(p => p.name === name);
+    const availableStock = product ? product.stock : 0;
+
     const existingItem = cart.find(item => item.name === name);
     if (existingItem) {
+        if (existingItem.quantity >= availableStock) {
+            alert(`Sorry, only ${availableStock} unit${availableStock === 1 ? '' : 's'} of "${name}" available.`);
+            return;
+        }
         existingItem.quantity += 1;
     } else {
+        if (availableStock <= 0) return;
         cart.push({ name, category, price, quantity: 1 });
     }
 

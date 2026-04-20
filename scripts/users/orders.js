@@ -14,24 +14,14 @@ class Orders {
     }
 
     loadOrders() {
-        // Load orders from localStorage (only real orders from actual checkouts)
         const storedOrders = localStorage.getItem('orders');
         if (storedOrders) {
             try {
-                let orders = JSON.parse(storedOrders);
-                
-                // Remove hardcoded sample orders, keep only real ones (like 'jj')
-                const hardcodedCustomers = ['Ana Leka', 'James Brown', 'Maria Johnson', 'Robert Chen', 'Sarah Rivera'];
-                this.orders = orders.filter(order => !hardcodedCustomers.includes(order.customer));
-                
-                // Save the cleaned orders back to localStorage
-                this.saveOrders();
+                this.orders = JSON.parse(storedOrders);
             } catch (e) {
-                console.error('Error loading orders:', e);
                 this.orders = [];
             }
         } else {
-            // No orders yet
             this.orders = [];
         }
     }
@@ -134,7 +124,7 @@ class Orders {
             product: product,
             date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
             amount: amount,
-            status: 'Pending'
+            status: 'Completed'
         };
 
         this.orders.push(newOrder);
