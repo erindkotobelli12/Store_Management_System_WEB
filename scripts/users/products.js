@@ -10,7 +10,7 @@ class Products {
     init() {
         this.loadCategories();
         this.loadProducts();
-        this.attachEventListeners();
+        this.attachStaticEventListeners();
         this.populateCategoryDropdown();
         this.updateStats();
         this.displayProducts();
@@ -64,58 +64,16 @@ class Products {
     }
 
     loadProducts() {
-        // Load products from localStorage or use sample data
         const storedProducts = localStorage.getItem('products');
         if (storedProducts) {
             this.products = JSON.parse(storedProducts);
         } else {
-            // Initialize with sample products
             this.products = [
-                {
-                    id: '#PRD-001',
-                    name: 'Air Zoom Pro',
-                    category: 'Footwear',
-                    price: '$89.99',
-                    stock: 210,
-                    sales: 1240,
-                    status: 'Active'
-                },
-                {
-                    id: '#PRD-002',
-                    name: 'Urban Pack XL',
-                    category: 'Accessories',
-                    price: '$129.99',
-                    stock: 154,
-                    sales: 987,
-                    status: 'Active'
-                },
-                {
-                    id: '#PRD-003',
-                    name: 'Classic Snapback',
-                    category: 'Headwear',
-                    price: '$49.99',
-                    stock: 15,
-                    sales: 2145,
-                    status: 'Low Stock'
-                },
-                {
-                    id: '#PRD-004',
-                    name: 'Graphic Tee Pack',
-                    category: 'Clothing',
-                    price: '$29.99',
-                    stock: 0,
-                    sales: 1876,
-                    status: 'Out of Stock'
-                },
-                {
-                    id: '#PRD-005',
-                    name: 'Sport Watch S2',
-                    category: 'Electronics',
-                    price: '$199.99',
-                    stock: 62,
-                    sales: 542,
-                    status: 'Active'
-                }
+                { id: '#PRD-001', name: 'Air Zoom Pro',    category: 'Footwear',    price: '$89.99',  stock: 210, sales: 1240, status: 'Active' },
+                { id: '#PRD-002', name: 'Urban Pack XL',   category: 'Accessories', price: '$129.99', stock: 154, sales: 987,  status: 'Active' },
+                { id: '#PRD-003', name: 'Classic Snapback', category: 'Headwear',   price: '$49.99',  stock: 15,  sales: 2145, status: 'Low Stock' },
+                { id: '#PRD-004', name: 'Graphic Tee Pack', category: 'Clothing',   price: '$29.99',  stock: 0,   sales: 1876, status: 'Out of Stock' },
+                { id: '#PRD-005', name: 'Sport Watch S2',  category: 'Electronics', price: '$199.99', stock: 62,  sales: 542,  status: 'Active' }
             ];
             this.saveProducts();
         }
@@ -155,7 +113,7 @@ class Products {
         if (outOfStockChange) outOfStockChange.textContent = `${outOfStockProducts} out of stock`;
     }
 
-    attachEventListeners() {
+    attachStaticEventListeners() {
         // Manage Categories button
         const manageCategoriesBtn = document.getElementById('manageCategoriesBtn');
         if (manageCategoriesBtn) {
@@ -179,20 +137,21 @@ class Products {
         if (saveBtn) {
             saveBtn.addEventListener('click', () => this.saveNewProduct());
         }
+    }
 
-        // View buttons
-        document.querySelectorAll('.btn-outline-primary').forEach((btn, index) => {
-            btn.addEventListener('click', () => this.viewProduct(index));
-        });
+    attachTableEventListeners() {
+        const tableBody = document.getElementById('productsTableBody');
+        if (!tableBody) return;
 
-        // Edit buttons
-        document.querySelectorAll('.btn-outline-success').forEach((btn, index) => {
-            btn.addEventListener('click', () => this.editProduct(index));
-        });
+        const rows = tableBody.querySelectorAll('tr');
+        rows.forEach((row, index) => {
+            const viewBtn = row.querySelector('.btn-outline-primary');
+            const editBtn = row.querySelector('.btn-outline-success');
+            const deleteBtn = row.querySelector('.btn-outline-danger');
 
-        // Delete buttons
-        document.querySelectorAll('.btn-outline-danger').forEach((btn, index) => {
-            btn.addEventListener('click', () => this.deleteProduct(index));
+            if (viewBtn) viewBtn.addEventListener('click', () => this.viewProduct(index));
+            if (editBtn) editBtn.addEventListener('click', () => this.editProduct(index));
+            if (deleteBtn) deleteBtn.addEventListener('click', () => this.deleteProduct(index));
         });
     }
 
@@ -231,7 +190,7 @@ class Products {
             </tr>
         `).join('');
 
-        this.attachEventListeners();
+        this.attachTableEventListeners();
     }
 
     viewProduct(index) {
@@ -280,8 +239,9 @@ class Products {
         document.getElementById('productPrice').value = '';
         document.getElementById('productStock').value = '';
 
-        // Show the modal
-        const modal = new bootstrap.Modal(document.getElementById('addProductModal'));
+        // Reuse existing modal instance or create one
+        const modalEl = document.getElementById('addProductModal');
+        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
         modal.show();
     }
 
@@ -344,7 +304,8 @@ class Products {
     showCategoriesModal() {
         this.updateCategoriesList();
         document.getElementById('newCategory').value = '';
-        const modal = new bootstrap.Modal(document.getElementById('manageCategoriesModal'));
+        const modalEl = document.getElementById('manageCategoriesModal');
+        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
         modal.show();
     }
 

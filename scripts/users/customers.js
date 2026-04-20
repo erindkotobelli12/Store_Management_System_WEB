@@ -9,30 +9,37 @@ class Customers {
     init() {
         this.loadCustomers();
         this.attachEventListeners();
+        this.setupAutoRefresh();
     }
 
     loadCustomers() {
         // Load customers from localStorage (registered users only)
         const storedCustomers = localStorage.getItem('customers');
+        const allOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+
         if (storedCustomers) {
             const rawCustomers = JSON.parse(storedCustomers);
             // Transform stored customers to display format
             this.customers = rawCustomers.map((customer, index) => {
-                // Generate phone if not present
-                const phone = customer.phone || '+1 (555) ' + String(100 + index * 111).padStart(4, '0');
+                const customerName = `${customer.name || ''} ${customer.surname || ''}`.trim();
+
+                // Calculate real order count and total spent from orders
+                const customerOrders = allOrders.filter(o => o.customer === customerName);
+                const totalSpent = customerOrders.reduce((sum, o) => {
+                    return sum + (parseFloat(String(o.amount).replace(/[^0-9.-]+/g, '')) || 0);
+                }, 0);
+
                 return {
                     id: `#CUST-${String(index + 1).padStart(3, '0')}`,
-                    name: `${customer.name || ''} ${customer.surname || ''}`.trim(),
+                    name: customerName,
                     email: customer.email,
-                    phone: phone,
-                    orders: customer.orders || 0,
-                    spent: customer.spent || '$0.00',
+                    orders: customerOrders.length,
+                    spent: `$${totalSpent.toFixed(2)}`,
                     joinDate: customer.joinDate || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
                     status: customer.status || 'Active'
                 };
             });
         } else {
-            // No registered customers yet
             this.customers = [];
         }
         this.displayCustomers();
@@ -117,7 +124,6 @@ class Customers {
                         </div>
                     </td>
                     <td>${customer.email}</td>
-                    <td>${customer.phone}</td>
                     <td>${customer.orders}</td>
                     <td>${customer.spent}</td>
                     <td>${customer.joinDate}</td>
@@ -136,7 +142,7 @@ class Customers {
 
     viewCustomer(index) {
         const customer = this.customers[index];
-        alert(`Customer Details:\n\nID: ${customer.id}\nName: ${customer.name}\nEmail: ${customer.email}\nPhone: ${customer.phone}\nTotal Orders: ${customer.orders}\nTotal Spent: ${customer.spent}\nJoin Date: ${customer.joinDate}\nStatus: ${customer.status}`);
+        alert(`Customer Details:\n\nID: ${customer.id}\nName: ${customer.name}\nEmail: ${customer.email}\nTotal Orders: ${customer.orders}\nTotal Spent: ${customer.spent}\nJoin Date: ${customer.joinDate}\nStatus: ${customer.status}`);
     }
 
     editCustomer(index) {
@@ -170,14 +176,10 @@ class Customers {
         const email = prompt('Enter email:');
         if (!email) return;
 
-        const phone = prompt('Enter phone number:');
-        if (!phone) return;
-
         const newCustomer = {
             id: `#CUST-${this.customers.length + 1}`.padStart(8, '0'),
             name: name,
             email: email,
-            phone: phone,
             orders: 0,
             spent: '$0.00',
             joinDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
