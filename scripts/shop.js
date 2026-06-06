@@ -1,15 +1,15 @@
-const currentCustomer = JSON.parse(localStorage.getItem('currentcustomer'));
-const accountButton = $("#account_button");
-const accountLabel = $("#account_label");
-const cartButton = $("#cart_button");
-const cartPanel = $("#cart_panel");
-const cartItemsContainer = $("#cart_items");
-const cartClose = $("#cart_close");
-const checkoutButton = $("#checkout_button");
-const productGrid = $(".product-grid");
-const resultsCount = $(".results-count");
-const categoryList = $(".category-list");
-const productSearch = $(".nav-search input");
+const currentCustomer = api.getCurrentUser();
+const accountButton = $('#account_button');
+const accountLabel = $('#account_label');
+const cartButton = $('#cart_button');
+const cartPanel = $('#cart_panel');
+const cartItemsContainer = $('#cart_items');
+const cartClose = $('#cart_close');
+const checkoutButton = $('#checkout_button');
+const productGrid = $('.product-grid');
+const resultsCount = $('.results-count');
+const categoryList = $('.category-list');
+const productSearch = $('.nav-search input');
 
 let allProducts = [];
 let activeCategory = 'All Products';
@@ -20,26 +20,14 @@ function isLoggedIn() {
 }
 
 function getCart() {
-    return (currentCustomer && currentCustomer.shoppingCart) ? currentCustomer.shoppingCart : [];
+    return (currentCustomer && Array.isArray(currentCustomer.shoppingCart)) ? currentCustomer.shoppingCart : [];
 }
 
-function saveCurrentCustomer() {
+async function saveCurrentCustomer() {
     if (!currentCustomer || !currentCustomer.email) return;
-    localStorage.setItem('currentcustomer', JSON.stringify(currentCustomer));
-    const customers = JSON.parse(localStorage.getItem('customers')) || [];
-    const index = customers.findIndex(u => u.email === currentCustomer.email);
-    if (index !== -1) {
-        customers[index].shoppingCart = currentCustomer.shoppingCart || [];
-        localStorage.setItem('customers', JSON.stringify(customers));
-    }
-}
-
-function getOrders() {
-    return JSON.parse(localStorage.getItem('orders')) || [];
-}
-
-function saveOrders(orders) {
-    localStorage.setItem('orders', JSON.stringify(orders));
+    currentCustomer.shoppingCart = currentCustomer.shoppingCart || [];
+    await api.saveCart(currentCustomer.email, currentCustomer.shoppingCart);
+    api.setCurrentUser(currentCustomer);
 }
 
 function generateOrderId() {
@@ -50,15 +38,9 @@ function generateOrderId() {
 
 function calculateCartTotal(cart) {
     return cart.reduce((total, item) => {
-        const amount = parseFloat(item.price.replace(/[^0-9.-]+/g, '')) || 0;
+        const amount = parseFloat(String(item.price).replace(/[^0-9.-]+/g, '')) || 0;
         return total + amount * item.quantity;
     }, 0);
-}
-
-function clearCart() {
-    if (!currentCustomer) return;
-    currentCustomer.shoppingCart = [];
-    saveCurrentCustomer();
 }
 
 function normalizePrice(price) {
@@ -83,9 +65,8 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
-function loadProducts() {
-    const storedProducts = JSON.parse(localStorage.getItem('products')) || [];
-
+async function loadProducts() {
+    const storedProducts = await api.getProducts();
     allProducts = storedProducts.map((product, index) => ({
         id: product.id || `#PRD-${String(index + 1).padStart(3, '0')}`,
         name: product.name || 'Unnamed Product',
@@ -115,11 +96,6 @@ function renderCategories() {
         categoryCounts[product.category] = (categoryCounts[product.category] || 0) + 1;
         return categoryCounts;
     }, {});
-
-    const adminCategories = JSON.parse(localStorage.getItem('productCategories')) || [];
-    adminCategories.forEach(cat => {
-        if (!(cat in counts)) counts[cat] = 0;
-    });
 
     const categoryItems = ['All Products', ...Object.keys(counts).sort((first, second) => first.localeCompare(second))];
 
@@ -162,7 +138,6 @@ function renderProducts() {
             <article class="product-card" data-product-id="${escapeHtml(product.id)}">
                 <div class="product-img">
                     <span class="product-badge ${stockBadgeClass}">${escapeHtml(stockLabel)}</span>
-
                 </div>
                 <div class="product-info">
                     <p class="product-category">${safeCategory}</p>
@@ -177,8 +152,8 @@ function renderProducts() {
     }).join(''));
 }
 
-function refreshShopProducts() {
-    loadProducts();
+async function refreshShopProducts() {
+    await loadProducts();
     renderCategories();
     renderProducts();
 }
@@ -188,22 +163,32 @@ function renderCartItems() {
     if (!cart || cart.length === 0) {
         cartItemsContainer.html('<div class="cart-empty">Your bag is empty.</div>');
         checkoutButton.prop('disabled', true);
+        updateCartTotal([]);
         return;
     }
 
     const itemsHtml = cart.map(item => {
         return `<div class="cart-item">
             <div class="cart-item-content">
-              <div class="cart-item-name">${item.name}</div>
-              <div class="cart-item-meta">${item.category} • Qty ${item.quantity}</div>
+              <div class="cart-item-name">${escapeHtml(item.name)}</div>
+              <div class="cart-item-meta">${escapeHtml(item.category)} • Qty ${item.quantity}</div>
             </div>
-            <div class="cart-item-price">${item.price}</div>
-            <button class="cart-item-delete" data-name="${item.name}" aria-label="Remove ${item.name}">×</button>
+            <div class="cart-item-price">${escapeHtml(item.price)}</div>
+            <button class="cart-item-delete" data-name="${escapeHtml(item.name)}" aria-label="Remove ${escapeHtml(item.name)}">×</button>
           </div>`;
     }).join('');
 
     cartItemsContainer.html(itemsHtml);
     checkoutButton.prop('disabled', false);
+    updateCartTotal(cart);
+}
+
+function updateCartTotal(cart) {
+    const total = calculateCartTotal(cart);
+    const totalElement = $('#cart_total strong');
+    if (totalElement.length) {
+        totalElement.text(`$${total.toFixed(2)}`);
+    }
 }
 
 if (isLoggedIn()) {
@@ -239,47 +224,32 @@ cartClose.click(function() {
     cartPanel.attr('aria-hidden', 'true');
 });
 
-checkoutButton.click(function() {
+checkoutButton.click(async function() {
     if (!isLoggedIn()) return;
     const cart = getCart();
     if (!cart || cart.length === 0) return;
 
-    const orders = getOrders();
     const totalAmount = calculateCartTotal(cart);
-    const productSummary = cart.map(item => `${item.name} × ${item.quantity}`).join(', ');
 
-    const order = {
-        id: generateOrderId(),
-        customer: `${currentCustomer.name || ''} ${currentCustomer.surname || ''}`.trim() || currentCustomer.email || 'Guest',
-        product: productSummary,
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        amount: `$${totalAmount.toFixed(2)}`,
-        status: 'Completed'
-    };
+    try {
+        await api.checkout({
+            customerEmail: currentCustomer.email,
+            customerName: currentCustomer.name,
+            customerSurname: currentCustomer.surname,
+            cart,
+            totalAmount
+        });
 
-    // Deduct stock for each purchased item
-    const storedProducts = JSON.parse(localStorage.getItem('products')) || [];
-    cart.forEach(cartItem => {
-        const product = storedProducts.find(p => p.name === cartItem.name);
-        if (product) {
-            product.stock = Math.max(0, product.stock - cartItem.quantity);
-            if (product.stock === 0) {
-                product.status = 'Out of Stock';
-            } else if (product.stock < 50) {
-                product.status = 'Low Stock';
-            }
-        }
-    });
-    localStorage.setItem('products', JSON.stringify(storedProducts));
-
-    orders.unshift(order);
-    saveOrders(orders);
-    clearCart();
-    renderCartItems();
-    refreshShopProducts();
-    cartPanel.addClass('hidden');
-    cartPanel.attr('aria-hidden', 'true');
-    alert('Your order has been placed.');
+        currentCustomer.shoppingCart = [];
+        await saveCurrentCustomer();
+        await refreshShopProducts();
+        renderCartItems();
+        cartPanel.addClass('hidden');
+        cartPanel.attr('aria-hidden', 'true');
+        alert('Your order has been placed.');
+    } catch (error) {
+        alert(error.message || 'Checkout failed.');
+    }
 });
 
 $(document).click(function(event) {
@@ -289,7 +259,7 @@ $(document).click(function(event) {
     }
 });
 
-$(document).on('click', '.cart-item-delete', function() {
+$(document).on('click', '.cart-item-delete', async function() {
     const name = $(this).data('name');
     const cart = getCart();
     const index = cart.findIndex(item => item.name === name);
@@ -297,7 +267,7 @@ $(document).on('click', '.cart-item-delete', function() {
         cart.splice(index, 1);
         if (currentCustomer) {
             currentCustomer.shoppingCart = cart;
-            saveCurrentCustomer();
+            await saveCurrentCustomer();
         }
         renderCartItems();
     }
@@ -315,7 +285,7 @@ productSearch.on('input', function() {
     renderProducts();
 });
 
-$(document).on('click', '.add-to-cart', function() {
+$(document).on('click', '.add-to-cart', async function() {
     if (!isLoggedIn()) {
         alert('Please log in to add items to your bag.');
         return;
@@ -348,7 +318,7 @@ $(document).on('click', '.add-to-cart', function() {
 
     if (currentCustomer) {
         currentCustomer.shoppingCart = cart;
-        saveCurrentCustomer();
+        await saveCurrentCustomer();
     }
 
     alert(`Added "${name}" to your bag.`);
@@ -357,16 +327,9 @@ $(document).on('click', '.add-to-cart', function() {
     }
 });
 
-// Listen for product changes from admin panel (other tabs)
-$(window).on('storage', function(event) {
-    if (event.originalEvent.key === 'products') {
-        refreshShopProducts();
-    }
-});
-
 // Initialize shop on page load
-$(function() {
-    refreshShopProducts();
+$(async function() {
+    await refreshShopProducts();
 });
 
 

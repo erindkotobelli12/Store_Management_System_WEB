@@ -1,9 +1,5 @@
-$(document).ready(function() {
-    const currentCustomer = JSON.parse(localStorage.getItem('currentcustomer'));
-    const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
-    const currentUser = currentCustomer || currentAdmin;
-    const isAdmin = !!currentAdmin && !currentCustomer;
-
+$(document).ready(async function() {
+    const currentUser = api.getCurrentUser();
     if (!currentUser) {
         window.location.href = 'login.html';
         return;
@@ -36,7 +32,7 @@ $(document).ready(function() {
     });
 
     // Save button
-    $('#save-btn').click(function() {
+    $('#save-btn').click(async function() {
         const newName = $('#name').val().trim();
         const newSurname = $('#surname').val().trim();
         const newEmail = $('#email').val().trim();
@@ -47,48 +43,35 @@ $(document).ready(function() {
             return;
         }
 
-        currentUser.name = newName;
-        currentUser.surname = newSurname;
-        currentUser.email = newEmail;
-        currentUser.password = newPassword;
+        try {
+            const updatedUser = await api.updateUser(originalData.email, {
+                email: newEmail,
+                name: newName,
+                surname: newSurname,
+                password: newPassword,
+                status: currentUser.status,
+                shoppingCart: currentUser.shoppingCart || []
+            });
 
-        if (isAdmin) {
-            localStorage.setItem('currentAdmin', JSON.stringify(currentUser));
-            const admins = JSON.parse(localStorage.getItem('admins')) || [];
-            const index = admins.findIndex(a => a.email === originalData.email);
-            if (index !== -1) {
-                admins[index] = { ...currentUser };
-                localStorage.setItem('admins', JSON.stringify(admins));
-            }
-        } else {
-            localStorage.setItem('currentcustomer', JSON.stringify(currentUser));
-            const customers = JSON.parse(localStorage.getItem('customers')) || [];
-            const index = customers.findIndex(c => c.email === originalData.email);
-            if (index !== -1) {
-                customers[index] = { ...currentUser };
-                localStorage.setItem('customers', JSON.stringify(customers));
-            }
+            api.setCurrentUser(updatedUser);
+            originalData = { ...updatedUser };
+
+            $('#name, #surname, #email, #password').prop('readonly', true);
+            $('#edit-btn').show();
+            $('#save-btn, #cancel-btn').hide();
+            alert('Account updated successfully!');
+        } catch (error) {
+            alert(error.message || 'Could not update account.');
         }
-
-        originalData = { ...currentUser };
-
-        $('#name, #surname, #email, #password').prop('readonly', true);
-        $('#edit-btn').show();
-        $('#save-btn, #cancel-btn').hide();
-
-        alert('Account updated successfully!');
     });
 
-    // Logout button
     $('#logout-btn').click(function() {
         $('#logoutModal').modal('show');
     });
 
-    // Confirm logout
     $('#confirm-logout').click(function() {
-        localStorage.removeItem('currentcustomer');
-        localStorage.removeItem('currentAdmin');
+        api.removeCurrentUser();
         $('#logoutModal').modal('hide');
-        window.location.href = 'shop.html';
+        window.location.href = 'login.html';
     });
 });

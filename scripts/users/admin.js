@@ -5,14 +5,10 @@ class Admin extends User {
 }
 
 // Initialize dashboard stats
-function initDashboardStats() {
+async function initDashboardStats() {
     console.log('Initializing dashboard stats');
-    updateDashboardStats();
-    // Update stats whenever localStorage changes (e.g., when a new customer registers)
-    window.addEventListener('storage', updateDashboardStats);
-    // Update stats every 2 seconds to keep in sync
-    setInterval(updateDashboardStats, 2000);
-    // Update stats when page becomes visible (tab switch)
+    await updateDashboardStats();
+    setInterval(updateDashboardStats, 5000);
     document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'visible') {
             console.log('Admin page became visible, refreshing stats');
@@ -39,54 +35,45 @@ function parseAmount(amountStr) {
     return parseFloat(String(amountStr).replace(/[^0-9.-]+/g, '')) || 0;
 }
 
-function updateDashboardStats() {
-    // Load customers from localStorage
-    const storedCustomers = localStorage.getItem('customers');
-    const allCustomers = storedCustomers ? JSON.parse(storedCustomers) : [];
+async function updateDashboardStats() {
+    try {
+        const [allCustomers, allOrders, allProducts] = await Promise.all([
+            api.getCustomers(),
+            api.getOrders(),
+            api.getProducts()
+        ]);
 
-    // Load orders from localStorage
-    const storedOrders = localStorage.getItem('orders');
-    const allOrders = storedOrders ? JSON.parse(storedOrders) : [];
+        const totalCustomers = allCustomers.length;
+        const activeCustomers = allCustomers.filter(c => c.status === 'Active').length;
+        const totalOrders = allOrders.length;
+        const totalRevenue = allOrders.reduce((sum, order) => sum + parseAmount(order.amount), 0);
 
-    // Count all customers
-    const totalCustomers = allCustomers.length;
-    const activeCustomers = allCustomers.filter(c => c.status === 'Active').length;
+        const totalRevenueEl = document.getElementById('dashboardTotalRevenue');
+        if (totalRevenueEl) {
+            totalRevenueEl.textContent = `$${totalRevenue.toFixed(2)}`;
+        }
 
-    const totalOrders = allOrders.length;
-    const totalRevenue = allOrders.reduce((sum, order) => sum + parseAmount(order.amount), 0);
+        const totalOrdersEl = document.getElementById('dashboardTotalOrders');
+        if (totalOrdersEl) {
+            totalOrdersEl.textContent = totalOrders;
+        }
 
-    // Update total revenue
-    const totalRevenueEl = document.getElementById('dashboardTotalRevenue');
-    if (totalRevenueEl) {
-        totalRevenueEl.textContent = `$${totalRevenue.toFixed(2)}`;
+        const totalCustomersEl = document.getElementById('dashboardTotalCustomers');
+        if (totalCustomersEl) {
+            totalCustomersEl.textContent = totalCustomers;
+        }
+
+        const completedOrdersEl = document.getElementById('dashboardCompletedOrders');
+        if (completedOrdersEl) {
+            completedOrdersEl.textContent = totalOrders;
+        }
+
+        displayMonthlyRevenue(allOrders);
+        displayTopProducts(allOrders, allProducts);
+        displayRecentOrders(allOrders);
+    } catch (error) {
+        console.error('Error updating dashboard stats:', error);
     }
-
-    // Update total orders
-    const totalOrdersEl = document.getElementById('dashboardTotalOrders');
-    if (totalOrdersEl) {
-        totalOrdersEl.textContent = totalOrders;
-    }
-
-    // Update total customers
-    const totalCustomersEl = document.getElementById('dashboardTotalCustomers');
-    if (totalCustomersEl) {
-        totalCustomersEl.textContent = totalCustomers;
-    }
-
-    // Update completed orders (all orders are immediately completed)
-    const completedOrdersEl = document.getElementById('dashboardCompletedOrders');
-    if (completedOrdersEl) {
-        completedOrdersEl.textContent = totalOrders;
-    }
-
-    // Display monthly revenue overview
-    displayMonthlyRevenue(allOrders);
-
-    // Display top products
-    displayTopProducts(allOrders);
-
-    // Display recent orders
-    displayRecentOrders();
 }
 
 function displayMonthlyRevenue(orders) {
@@ -122,7 +109,7 @@ function displayMonthlyRevenue(orders) {
     }).join('');
 }
 
-function displayTopProducts(orders) {
+function displayTopProducts(orders, storedProducts) {
     const container = document.getElementById('topProductsContainer');
     if (!container) return;
 
@@ -157,8 +144,6 @@ function displayTopProducts(orders) {
         'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
     ];
 
-    const storedProducts = JSON.parse(localStorage.getItem('products')) || [];
-
     container.innerHTML = sorted.map(([name, units], index) => {
         const productData = storedProducts.find(p => p.name === name);
         const pricePerUnit = productData ? parseFloat(String(productData.price).replace(/[^0-9.-]+/g, '')) || 0 : 0;
@@ -185,22 +170,17 @@ function displayTopProducts(orders) {
     }).join('');
 }
 
-function displayRecentOrders() {
+function displayRecentOrders(orders) {
     const tableBody = document.getElementById('recentOrdersTableBody');
     if (!tableBody) return;
 
-    // Load orders from localStorage
-    const storedOrders = localStorage.getItem('orders');
-    const orders = storedOrders ? JSON.parse(storedOrders) : [];
-
-    if (orders.length === 0) {
+    if (!orders || orders.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #999;">No orders yet</td></tr>';
         return;
     }
-    
-    // Show only the last 5 recent orders
-    const recentOrders = orders.slice(-5).reverse();
-    
+
+    const recentOrders = [...orders].slice(-5).reverse();
+
     tableBody.innerHTML = recentOrders.map(order => {
         const initials = order.customer.substring(0, 2).toUpperCase();
 

@@ -6,42 +6,32 @@ class Customers {
         this.init();
     }
 
-    init() {
-        this.loadCustomers();
+    async init() {
+        await this.loadCustomers();
         this.attachEventListeners();
         this.setupAutoRefresh();
     }
 
-    loadCustomers() {
-        // Load customers from localStorage (registered users only)
-        const storedCustomers = localStorage.getItem('customers');
-        const allOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+    async loadCustomers() {
+        const allCustomers = await api.getCustomers();
+        const allOrders = await api.getOrders();
 
-        if (storedCustomers) {
-            const rawCustomers = JSON.parse(storedCustomers);
-            // Transform stored customers to display format
-            this.customers = rawCustomers.map((customer, index) => {
-                const customerName = `${customer.name || ''} ${customer.surname || ''}`.trim();
+        this.customers = allCustomers.map((customer, index) => {
+            const customerName = `${customer.name || ''} ${customer.surname || ''}`.trim();
+            const customerOrders = allOrders.filter(o => o.customer === customerName);
+            const totalSpent = customerOrders.reduce((sum, o) => sum + (parseFloat(String(o.amount).replace(/[^0-9.-]+/g, '')) || 0), 0);
 
-                // Calculate real order count and total spent from orders
-                const customerOrders = allOrders.filter(o => o.customer === customerName);
-                const totalSpent = customerOrders.reduce((sum, o) => {
-                    return sum + (parseFloat(String(o.amount).replace(/[^0-9.-]+/g, '')) || 0);
-                }, 0);
+            return {
+                id: `#CUST-${String(index + 1).padStart(3, '0')}`,
+                name: customerName,
+                email: customer.email,
+                orders: customerOrders.length,
+                spent: `$${totalSpent.toFixed(2)}`,
+                joinDate: customer.joinDate || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+                status: customer.status || 'Active'
+            };
+        });
 
-                return {
-                    id: `#CUST-${String(index + 1).padStart(3, '0')}`,
-                    name: customerName,
-                    email: customer.email,
-                    orders: customerOrders.length,
-                    spent: `$${totalSpent.toFixed(2)}`,
-                    joinDate: customer.joinDate || new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-                    status: customer.status || 'Active'
-                };
-            });
-        } else {
-            this.customers = [];
-        }
         this.displayCustomers();
         this.updateStats();
     }
@@ -49,18 +39,16 @@ class Customers {
     updateStats() {
         const totalCustomers = this.customers.length;
         const activeCustomers = this.customers.filter(c => c.status === 'Active').length;
-        
-        // Count customers registered this month
+
         const currentDate = new Date();
         const currentMonth = currentDate.getMonth();
         const currentYear = currentDate.getFullYear();
-        
+
         const newCustomers = this.customers.filter(c => {
             const joinDate = new Date(c.joinDate);
             return joinDate.getMonth() === currentMonth && joinDate.getFullYear() === currentYear;
         }).length;
 
-        // Update stat elements
         const totalCustomersEl = document.getElementById('totalCustomersCount');
         const newCustomersEl = document.getElementById('newCustomersCount');
         const activeCustomersEl = document.getElementById('activeCustomersCount');
@@ -68,40 +56,30 @@ class Customers {
         if (totalCustomersEl) totalCustomersEl.textContent = totalCustomers;
         if (newCustomersEl) newCustomersEl.textContent = newCustomers;
         if (activeCustomersEl) activeCustomersEl.textContent = activeCustomers;
-        
-        // Also update dashboard stats if they exist
+
         this.updateDashboardStats();
     }
 
     updateDashboardStats() {
         const dashboardTotalCustomers = document.getElementById('dashboardTotalCustomers');
         if (dashboardTotalCustomers) {
-            // Update dashboard with total customers count
             dashboardTotalCustomers.textContent = this.customers.length;
         }
     }
 
-    saveCustomers() {
-        localStorage.setItem('customers', JSON.stringify(this.customers));
-    }
-
     attachEventListeners() {
-        // View buttons
         document.querySelectorAll('.btn-outline-primary').forEach((btn, index) => {
             btn.addEventListener('click', () => this.viewCustomer(index));
         });
 
-        // Edit buttons
         document.querySelectorAll('.btn-outline-success').forEach((btn, index) => {
             btn.addEventListener('click', () => this.editCustomer(index));
         });
 
-        // Delete buttons
         document.querySelectorAll('.btn-outline-danger').forEach((btn, index) => {
             btn.addEventListener('click', () => this.deleteCustomer(index));
         });
     }
-
 
     displayCustomers(customers = this.customers) {
         const tableBody = document.getElementById('customersTableBody');
@@ -145,52 +123,51 @@ class Customers {
         alert(`Customer Details:\n\nID: ${customer.id}\nName: ${customer.name}\nEmail: ${customer.email}\nTotal Orders: ${customer.orders}\nTotal Spent: ${customer.spent}\nJoin Date: ${customer.joinDate}\nStatus: ${customer.status}`);
     }
 
-    editCustomer(index) {
+    async editCustomer(index) {
         const customer = this.customers[index];
         const newStatus = prompt(`Edit Status for ${customer.name}:\n\nCurrent: ${customer.status}\n\nEnter new status (Active/Inactive):`, customer.status);
-        
         if (newStatus) {
-            this.customers[index].status = newStatus;
-            this.saveCustomers();
-            this.displayCustomers();
-            this.updateStats();
-            alert('Customer updated successfully!');
+            try {
+                await api.updateUser(customer.email, { status: newStatus, email: customer.email, name: customer.name, surname: '', password: '', shoppingCart: [] });
+                await this.loadCustomers();
+                alert('Customer updated successfully!');
+            } catch (error) {
+                alert(error.message || 'Could not update customer.');
+            }
         }
     }
 
-    deleteCustomer(index) {
+    async deleteCustomer(index) {
         const customer = this.customers[index];
         if (confirm(`Are you sure you want to delete "${customer.name}"?`)) {
-            this.customers.splice(index, 1);
-            this.saveCustomers();
-            this.displayCustomers();
-            this.updateStats();
-            alert('Customer deleted successfully!');
+            try {
+                await api.deleteCustomer(customer.email);
+                await this.loadCustomers();
+                alert('Customer deleted successfully!');
+            } catch (error) {
+                alert(error.message || 'Could not delete customer.');
+            }
         }
     }
 
-    addCustomer() {
+    async addCustomer() {
         const name = prompt('Enter customer name:');
         if (!name) return;
 
         const email = prompt('Enter email:');
         if (!email) return;
 
-        const newCustomer = {
-            id: `#CUST-${this.customers.length + 1}`.padStart(8, '0'),
-            name: name,
-            email: email,
-            orders: 0,
-            spent: '$0.00',
-            joinDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-            status: 'Active'
-        };
+        try {
+            await api.createCustomer({ name, email });
+            await this.loadCustomers();
+            alert('Customer added successfully!');
+        } catch (error) {
+            alert(error.message || 'Could not add customer.');
+        }
+    }
 
-        this.customers.push(newCustomer);
-        this.saveCustomers();
-        this.displayCustomers();
-        this.updateStats();
-        alert('Customer added successfully!');
+    setupAutoRefresh() {
+        setInterval(() => this.loadCustomers(), 10000);
     }
 }
 

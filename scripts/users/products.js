@@ -7,22 +7,60 @@ class Products {
         this.init();
     }
 
-    init() {
-        this.loadCategories();
-        this.loadProducts();
+    async init() {
+        await this.loadCategories();
+        await this.loadProducts();
         this.attachStaticEventListeners();
         this.populateCategoryDropdown();
+        this.updateCategoriesList();
         this.updateStats();
         this.displayProducts();
     }
 
-    loadCategories() {
+    async loadProducts() {
+        try {
+            const apiProducts = await api.getProducts();
+            this.products = apiProducts.map((product, index) => ({
+                id: product.id || `#PRD-${String(index + 1).padStart(3, '0')}`,
+                name: product.name,
+                category: product.category,
+                price: product.price,
+                stock: Number.isFinite(product.stock) ? product.stock : parseInt(product.stock, 10) || 0,
+                sales: Number.isFinite(product.sales) ? product.sales : parseInt(product.sales, 10) || 0,
+                status: product.status || (Number(product.stock) === 0 ? 'Out of Stock' : Number(product.stock) < 50 ? 'Low Stock' : 'Active')
+            }));
+            this.saveProducts();
+        } catch (error) {
+            const storedProducts = localStorage.getItem('products');
+            this.products = storedProducts ? JSON.parse(storedProducts) : [];
+        }
+    }
+
+    async loadCategories() {
         const storedCategories = localStorage.getItem('productCategories');
+
+        try {
+            const apiCategories = await api.getCategories();
+            if (Array.isArray(apiCategories)) {
+                this.categories = apiCategories.map(category => typeof category === 'string' ? category : category.name).filter(Boolean);
+                this.saveCategories();
+                return;
+            }
+        } catch (error) {
+            // fallback to localStorage when backend is unavailable
+        }
+
         if (storedCategories) {
-            this.categories = JSON.parse(storedCategories);
+            try {
+                const parsed = JSON.parse(storedCategories);
+                this.categories = Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                this.categories = ['Footwear', 'Accessories', 'Headwear', 'Clothing', 'Electronics'];
+                this.saveCategories();
+            }
         } else {
-            // Default categories
-            this.categories = [];
+            // Seed default categories so the admin view is not empty
+            this.categories = ['Footwear', 'Accessories', 'Headwear', 'Clothing', 'Electronics'];
             this.saveCategories();
         }
     }
@@ -55,22 +93,17 @@ class Products {
         const list = document.getElementById('categoriesList');
         if (!list) return;
 
+        if (this.categories.length === 0) {
+            list.innerHTML = '<div class="text-muted">No categories added yet.</div>';
+            return;
+        }
+
         list.innerHTML = this.categories.map((category, index) => `
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; margin-bottom: 8px; border-radius: 4px;">
                 <span>${category}</span>
                 <button class="btn btn-sm btn-danger" onclick="window.productsInstance.deleteCategory(${index})" style="padding: 4px 8px; font-size: 12px;">Delete</button>
             </div>
         `).join('');
-    }
-
-    loadProducts() {
-        const storedProducts = localStorage.getItem('products');
-        if (storedProducts) {
-            this.products = JSON.parse(storedProducts);
-        } else {
-            this.products = [];
-            this.saveProducts();
-        }
     }
 
     saveProducts() {
@@ -192,37 +225,52 @@ class Products {
         alert(`Product Details:\n\nID: ${product.id}\nName: ${product.name}\nCategory: ${product.category}\nPrice: ${product.price}\nStock: ${product.stock} units\nTotal Sales: ${product.sales}\nStatus: ${product.status}`);
     }
 
-    editProduct(index) {
+    async editProduct(index) {
         const product = this.products[index];
         const newStock = prompt(`Edit Stock for ${product.name}:\n\nCurrent Stock: ${product.stock}\n\nEnter new stock quantity:`, product.stock);
         
         if (newStock !== null && !isNaN(newStock)) {
-            this.products[index].stock = parseInt(newStock);
-            
-            // Update status based on stock
-            if (this.products[index].stock === 0) {
-                this.products[index].status = 'Out of Stock';
-            } else if (this.products[index].stock < 50) {
-                this.products[index].status = 'Low Stock';
-            } else {
-                this.products[index].status = 'Active';
-            }
+            const updatedStock = parseInt(newStock, 10);
+            const updatedStatus = updatedStock === 0 ? 'Out of Stock' : updatedStock < 50 ? 'Low Stock' : 'Active';
+            const updatedProduct = {
+                ...product,
+                stock: updatedStock,
+                status: updatedStatus
+            };
 
-            this.saveProducts();
-            this.displayProducts();
-            this.updateStats();
-            alert('Product updated successfully!');
+            try {
+                await api.updateProduct(product.id, {
+                    name: updatedProduct.name,
+                    category: updatedProduct.category,
+                    price: updatedProduct.price,
+                    stock: updatedProduct.stock,
+                    sales: updatedProduct.sales,
+                    status: updatedProduct.status
+                });
+                this.products[index] = updatedProduct;
+                this.saveProducts();
+                this.displayProducts();
+                this.updateStats();
+                alert('Product updated successfully!');
+            } catch (error) {
+                alert(error.message || 'Could not update product.');
+            }
         }
     }
 
-    deleteProduct(index) {
+    async deleteProduct(index) {
         const product = this.products[index];
         if (confirm(`Are you sure you want to delete "${product.name}"?`)) {
-            this.products.splice(index, 1);
-            this.saveProducts();
-            this.displayProducts();
-            this.updateStats();
-            alert('Product deleted successfully!');
+            try {
+                await api.deleteProduct(product.id);
+                this.products.splice(index, 1);
+                this.saveProducts();
+                this.displayProducts();
+                this.updateStats();
+                alert('Product deleted successfully!');
+            } catch (error) {
+                alert(error.message || 'Could not delete product.');
+            }
         }
     }
 
@@ -239,11 +287,11 @@ class Products {
         modal.show();
     }
 
-    saveNewProduct() {
+    async saveNewProduct() {
         const name = document.getElementById('productName').value.trim();
         const category = document.getElementById('productCategory').value;
         const price = document.getElementById('productPrice').value.trim();
-        const stock = document.getElementById('productStock').value.trim();
+        const stockValue = document.getElementById('productStock').value.trim();
 
         // Validation
         if (!name) {
@@ -268,31 +316,45 @@ class Products {
             return;
         }
 
-        if (!stock || isNaN(stock) || parseInt(stock) < 0) {
+        if (!stockValue || isNaN(stockValue) || parseInt(stockValue, 10) < 0) {
             alert('Please enter a valid stock quantity (cannot be negative)');
             return;
         }
 
+        const stock = parseInt(stockValue, 10);
+        const status = stock === 0 ? 'Out of Stock' : stock < 50 ? 'Low Stock' : 'Active';
+
         const newProduct = {
-            id: `#PRD-${this.products.length + 1}`.padStart(7, '0'),
+            id: '#PRD-' + String(this.products.length + 1).padStart(3, '0'),
             name: name,
             category: category,
             price: price,
-            stock: parseInt(stock),
+            stock: stock,
             sales: 0,
-            status: parseInt(stock) > 0 ? 'Active' : (parseInt(stock) < 50 ? 'Low Stock' : 'Active')
+            status: status
         };
 
-        this.products.push(newProduct);
-        this.saveProducts();
-        this.displayProducts();
-        this.updateStats();
+        try {
+            await api.createProduct({
+                name: newProduct.name,
+                category: newProduct.category,
+                price: newProduct.price,
+                stock: newProduct.stock
+            });
 
-        // Close the modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('addProductModal'));
-        modal.hide();
+            this.products.push(newProduct);
+            this.saveProducts();
+            this.displayProducts();
+            this.updateStats();
 
-        alert('Product added successfully!');
+            // Close the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addProductModal'));
+            modal.hide();
+
+            alert('Product added successfully!');
+        } catch (error) {
+            alert(error.message || 'Could not add product.');
+        }
     }
 
     showCategoriesModal() {
@@ -303,7 +365,7 @@ class Products {
         modal.show();
     }
 
-    addCategory() {
+    async addCategory() {
         const categoryName = document.getElementById('newCategory').value.trim();
 
         if (!categoryName) {
@@ -316,36 +378,56 @@ class Products {
             return;
         }
 
-        this.categories.push(categoryName);
-        this.saveCategories();
-        this.populateCategoryDropdown();
-        this.updateCategoriesList();
-        document.getElementById('newCategory').value = '';
+        try {
+            await api.addCategory({ name: categoryName });
+            this.categories.push(categoryName);
+            this.saveCategories();
+            this.populateCategoryDropdown();
+            this.updateCategoriesList();
+            document.getElementById('newCategory').value = '';
+        } catch (error) {
+            alert(error.message || 'Could not add category.');
+        }
     }
 
-    deleteCategory(index) {
+    async deleteCategory(index) {
         const category = this.categories[index];
-        const productsInCategory = this.products.filter(p => p.category === category).length;
-        
+        const productsToDelete = this.products.filter(p => p.category === category);
+        const productsInCategory = productsToDelete.length;
+
         let confirmMessage = `Are you sure you want to delete "${category}"?`;
         if (productsInCategory > 0) {
             confirmMessage += ` This will also delete ${productsInCategory} product(s) in this category.`;
         }
-        
+
         if (confirm(confirmMessage)) {
-            // Delete all products in this category
+            // Delete all products in this category from the backend and local state
+            await Promise.all(productsToDelete.map(async product => {
+                try {
+                    await api.deleteProduct(product.id);
+                } catch (error) {
+                    console.warn(`Failed to delete product ${product.id}:`, error);
+                }
+            }));
+
             this.products = this.products.filter(p => p.category !== category);
             this.saveProducts();
-            
-            // Delete the category
+
+            // Delete the category from backend and local state
+            try {
+                await api.deleteCategory(category);
+            } catch (error) {
+                console.warn(`Failed to delete category ${category}:`, error);
+            }
+
             this.categories.splice(index, 1);
             this.saveCategories();
-            
+
             this.populateCategoryDropdown();
             this.updateCategoriesList();
             this.displayProducts();
             this.updateStats();
-            
+
             alert(`Category "${category}" and ${productsInCategory} product(s) deleted successfully!`);
         }
     }

@@ -6,16 +6,20 @@ class Revenue {
         this.init();
     }
 
-    init() {
-        this.loadOrders();
+    async init() {
+        await this.loadOrders();
         this.updateStats();
         this.displayRevenueTrend();
         this.displayTransactions();
     }
 
-    loadOrders() {
-        const storedOrders = localStorage.getItem('orders');
-        this.orders = storedOrders ? JSON.parse(storedOrders) : [];
+    async loadOrders() {
+        try {
+            this.orders = await api.getOrders();
+        } catch (error) {
+            console.error('Could not load orders for revenue:', error);
+            this.orders = [];
+        }
     }
 
     parseAmount(amountStr) {

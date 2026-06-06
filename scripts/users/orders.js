@@ -4,39 +4,22 @@ class Orders {
         this.init();
     }
 
-    init() {
-        this.loadOrders();
+    async init() {
+        await this.loadOrders();
         this.displayOrders();
         this.updateStats();
         this.attachEventListeners();
     }
 
-    loadOrders() {
-        // Load orders from localStorage (only real orders from actual checkouts)
-        const storedOrders = localStorage.getItem('orders');
-        if (storedOrders) {
-            try {
-                this.orders = JSON.parse(storedOrders);
-            } catch (e) {
-                console.error('Error loading orders:', e);
-                this.orders = [];
-            }
-        } else {
-            // No orders yet
-            this.orders = [];
-        }
-    }
-
-    saveOrders() {
-        localStorage.setItem('orders', JSON.stringify(this.orders));
+    async loadOrders() {
+        this.orders = await api.getOrders();
     }
 
     updateStats() {
         const totalOrders = this.orders.length;
         const pendingOrders = this.orders.filter(o => o.status === 'Pending').length;
-        const completedOrders = this.orders.filter(o => o.status === 'Delivered').length;
+        const completedOrders = this.orders.filter(o => o.status === 'Delivered' || o.status === 'Completed').length;
 
-        // Update order stat elements on orders page
         const totalOrdersEl = document.getElementById('totalOrdersCount');
         const pendingOrdersEl = document.getElementById('pendingOrdersCount');
         const completedOrdersEl = document.getElementById('completedOrdersCount');
@@ -45,7 +28,6 @@ class Orders {
         if (pendingOrdersEl) pendingOrdersEl.textContent = pendingOrders;
         if (completedOrdersEl) completedOrdersEl.textContent = completedOrders;
 
-        // Update dashboard if it exists
         this.updateDashboardStats(totalOrders);
     }
 
@@ -57,17 +39,14 @@ class Orders {
     }
 
     attachEventListeners() {
-        // View buttons
         document.querySelectorAll('.btn-outline-primary').forEach((btn, index) => {
             btn.addEventListener('click', () => this.viewOrder(index));
         });
 
-        // Edit buttons
         document.querySelectorAll('.btn-outline-success').forEach((btn, index) => {
             btn.addEventListener('click', () => this.editOrder(index));
         });
 
-        // Delete buttons
         document.querySelectorAll('.btn-outline-danger').forEach((btn, index) => {
             btn.addEventListener('click', () => this.deleteOrder(index));
         });
@@ -84,9 +63,10 @@ class Orders {
 
         tableBody.innerHTML = orders.map((order, index) => {
             const initials = order.customer.substring(0, 2).toUpperCase();
-            const badgeClass = order.status === 'Delivered' ? 'badge-delivered' : 'badge-pending';
-            const statusText = order.status === 'Delivered' ? 'Delivered' : 'Pending';
-            
+            const isDelivered = order.status === 'Delivered' || order.status === 'Completed';
+            const badgeClass = isDelivered ? 'badge-delivered' : 'badge-pending';
+            const statusText = isDelivered ? 'Delivered' : 'Pending';
+
             return `
                 <tr>
                     <td>${order.id}</td>
@@ -117,33 +97,41 @@ class Orders {
         alert(`Order Details:\n\nID: ${order.id}\nCustomer: ${order.customer}\nProduct: ${order.product}\nDate: ${order.date}\nAmount: ${order.amount}\nStatus: ${order.status}`);
     }
 
-    editOrder(index) {
+    async editOrder(index) {
         const order = this.orders[index];
         const newStatus = prompt(`Edit Status for Order ${order.id}:\n\nCurrent: ${order.status}\n\nEnter new status (Pending/Delivered):`, order.status);
-        
+
         if (newStatus && (newStatus === 'Pending' || newStatus === 'Delivered')) {
-            this.orders[index].status = newStatus;
-            this.saveOrders();
-            this.displayOrders();
-            this.updateStats();
-            alert('Order updated successfully!');
+            try {
+                await api.updateOrder(order.id, { status: newStatus });
+                await this.loadOrders();
+                this.displayOrders();
+                this.updateStats();
+                alert('Order updated successfully!');
+            } catch (error) {
+                alert(error.message || 'Could not update order.');
+            }
         } else if (newStatus) {
             alert('Invalid status. Please enter "Pending" or "Delivered"');
         }
     }
 
-    deleteOrder(index) {
+    async deleteOrder(index) {
         const order = this.orders[index];
         if (confirm(`Are you sure you want to delete order "${order.id}"?`)) {
-            this.orders.splice(index, 1);
-            this.saveOrders();
-            this.displayOrders();
-            this.updateStats();
-            alert('Order deleted successfully!');
+            try {
+                await api.deleteOrder(order.id);
+                await this.loadOrders();
+                this.displayOrders();
+                this.updateStats();
+                alert('Order deleted successfully!');
+            } catch (error) {
+                alert(error.message || 'Could not delete order.');
+            }
         }
     }
 
-    addOrder(customerName, product, amount) {
+    async addOrder(customerName, product, amount) {
         const newOrder = {
             id: `#ORD-${1000 + this.orders.length}`,
             customer: customerName,
@@ -153,11 +141,16 @@ class Orders {
             status: 'Pending'
         };
 
-        this.orders.push(newOrder);
-        this.saveOrders();
-        this.displayOrders();
-        this.updateStats();
-        return newOrder;
+        try {
+            await api.createOrder(newOrder);
+            await this.loadOrders();
+            this.displayOrders();
+            this.updateStats();
+            return newOrder;
+        } catch (error) {
+            console.error('Could not add order:', error);
+            return null;
+        }
     }
 }
 

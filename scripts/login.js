@@ -1,35 +1,23 @@
-$("#sign-in-button").click(function() {
-    const email = $("#email").val();
-    const password = $("#password").val();
-    
-    // Check customers
-    const customers = JSON.parse(localStorage.getItem('customers')) || [];
-    const customer = customers.find(u => u.email === email && u.password === password);
-    if (customer) {
-        localStorage.setItem('currentcustomer', JSON.stringify(customer));
-        alert('Login successful!');
-        window.location.href = 'shop.html';
+$('#sign-in-button').click(async function() {
+    const email = $('#email').val().trim();
+    const password = $('#password').val().trim();
+
+    if (!email || !password) {
+        alert('Please enter both email and password.');
         return;
     }
-    
-    // Check admins
-    let admins = JSON.parse(localStorage.getItem('admins')) || [];
-    
-    // Initialize default admin if no admins exist
-    if (admins.length === 0) {
-        const defaultAdmin = new Admin('admin@gmail.com', 'admin123', 'admin', 'admin');
-        admins.push(defaultAdmin);
-        localStorage.setItem('admins', JSON.stringify(admins));
-    }
-    
-    // Find admin with matching credentials
-    const admin = admins.find(a => a.email === email && a.password === password);
-    if (admin) {
+
+    try {
+        const user = await api.login({ email, password });
+        api.setCurrentUser(user);
         alert('Login successful!');
-        localStorage.setItem('currentAdmin', JSON.stringify(admin));
-        window.location.href = 'admin.html';
-        return;
+        if (user.role === 'admin') {
+            window.location.href = 'admin.html';
+        } else {
+            window.location.href = 'shop.html';
+        }
+    } catch (error) {
+        alert(error.message || 'Invalid email or password.');
     }
-    alert('Invalid email or password.');
 });
 
