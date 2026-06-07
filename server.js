@@ -97,6 +97,12 @@ function safeUserRow(row) {
   };
 }
 
+function generateOrderId() {
+  const timestamp = Date.now();
+  const randomSuffix = Math.floor(Math.random() * 90000) + 10000;
+  return `#ORD-${timestamp.toString().slice(-8)}${randomSuffix}`;
+}
+
 app.post('/api/register', async (req, res) => {
   try {
     const { firstname, lastname, email, password } = req.body;
@@ -355,8 +361,7 @@ app.post('/api/checkout', async (req, res) => {
       return res.status(400).json({ error: 'Missing checkout data.' });
     }
 
-    const orderCount = await get('SELECT COUNT(*) AS count FROM orders');
-    const newOrderId = `#ORD-${String((orderCount.count || 0) + 1).padStart(5, '0')}`;
+    const newOrderId = generateOrderId();
     const orderDate = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const customerNameDisplay = `${customerName || ''} ${customerSurname || ''}`.trim() || customerEmail;
     const productSummary = cart.map(item => `${item.name} × ${item.quantity}`).join(', ');
